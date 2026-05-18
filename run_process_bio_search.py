@@ -9,21 +9,71 @@ import math
 import random
 import re
 import shutil
+import sys
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+PROCESSING_DIR = Path(__file__).resolve().parents[1] / "processing"
+if str(PROCESSING_DIR) not in sys.path:
+    sys.path.insert(0, str(PROCESSING_DIR))
+
 import run_joint_single_factor_rounds as base
 
 
-PROCESS_BIO = Path(r"F:\APSIM710-r4221\process_bio\output")
+PROCESS_BIO = Path(r"F:\APSIM710-r4221\process_bio\output_sobol")
 INDEX_PATH = PROCESS_BIO / "iteration_index.csv"
 BEST_DIR = PROCESS_BIO / "best"
 WHEAT_LATE_STAGE_CN_DEFAULT = "蜡熟期"
 DEFAULT_VALIDATION_CSV = Path(__file__).resolve().parent / "independent_validation_observations_p02_maize_p01_wheat.csv"
 DEFAULT_TRUTH_TEMPLATE = Path(__file__).resolve().parent / "modified_from_truth.apsim"
 EPS = 1e-9
+
+PROCESS_BIO_PHASE_COLS = [
+    "Date",
+    "Rainfall",
+    "currentState",
+    "rotationNumber",
+    "simulation_days",
+    "SoilWater",
+    "water_1",
+    "water_2",
+    "water_3",
+    "water_4",
+    "water_5",
+    "SurfaceRunoff",
+    "SurfacePond",
+    "Infiltration",
+    "MaizeBio",
+    "WheatBio",
+    "MaizeYield",
+    "WheatYield",
+    "wheatlai",
+    "maizelai",
+    "WheatLeafGreen",
+    "WheatLeafSen",
+    "WheatStemGreen",
+    "WheatStemSen",
+    "MaizeLeafGreen",
+    "MaizeLeafSen",
+    "MaizeStemGreen",
+    "MaizeStemSen",
+    "WheatStage",
+    "MaizeStage",
+    "WheatGrain_no",
+]
+
+PROCESS_BIO_NUMERIC_PHASE_COLS = [
+    c
+    for c in PROCESS_BIO_PHASE_COLS
+    if c not in ("Date", "currentState", "WheatStage", "MaizeStage")
+]
+
+# 当前 process_bio 的 APSIM output/report 已经扩展了 Phases.out 列。
+# 原 processing 模块中的固定列定义较旧，会把 WheatStage/MaizeStage 读错位。
+base.PHASE_COLS = PROCESS_BIO_PHASE_COLS
+base.NUMERIC_PHASE_COLS = PROCESS_BIO_NUMERIC_PHASE_COLS
 
 GROUP_KEYS = (
     "total_biomass",
@@ -49,6 +99,79 @@ SOIL_VAR_ALIASES = {
     "water_3": ["water_3", "sw3", "sw_3", "soilwater3", "soil_water_3", "theta30", "vwc30", "swc30"],
     "water_4": ["water_4", "sw4", "sw_4", "soilwater4", "soil_water_4", "theta40", "vwc40", "swc40"],
     "water_5": ["water_5", "sw5", "sw_5", "soilwater5", "soil_water_5", "theta50", "vwc50", "swc50"],
+}
+
+SOBOL_PRIORITY = {
+    "maize": {
+        "phenology": [
+            "tt_flag_to_flower",
+            "tt_endjuv_to_init",
+            "tt_flower_to_maturity",
+            "tt_emerg_to_endjuv",
+        ],
+        "yield_component": [
+            "tt_flag_to_flower",
+            "tt_endjuv_to_init",
+            "tt_flower_to_maturity",
+        ],
+        "biomass_canopy": [
+            "rue",
+        ],
+    },
+    "wheat": {
+        "phenology": [
+            "tt_floral_initiation",
+            "tt_end_of_juvenile",
+            "photop_sens",
+            "vern_sens",
+        ],
+        "yield_component": [
+            "tt_floral_initiation",
+            "tt_end_of_juvenile",
+            "photop_sens",
+            "vern_sens",
+            "tt_start_grain_fill",
+            "max_grain_size",
+        ],
+        "biomass_canopy": [
+            "rue",
+            "largestLeafParams[1]",
+            "largestLeafParams[2]",
+        ],
+    },
+}
+
+PARAM_ALIASES = {
+    "maize": {
+        "largestLeafParams[0]": "largestLeafArea",
+        "largestLeafParams[1]": "largestLeafB",
+        "largestLeafParams[2]": "largestLeafC",
+    },
+    "wheat": {
+        "largestLeafParams[0]": "largestLeafArea",
+        "largestLeafParams[1]": "largestLeafB",
+        "largestLeafParams[2]": "largestLeafC",
+    },
+}
+
+PARAM_BOUNDS = {
+    ("maize", "tt_emerg_to_endjuv"): (40.0, 120.0),
+    ("maize", "tt_endjuv_to_init"): (120.0, 360.0),
+    ("maize", "tt_flag_to_flower"): (15.0, 90.0),
+    ("maize", "tt_flower_to_maturity"): (650.0, 1050.0),
+    ("maize", "rue"): (2.0, 4.5),
+    ("maize", "largestLeafParams[0]"): (300.0, 1100.0),
+    ("maize", "largestLeafParams[1]"): (-3.0, 1.0),
+    ("maize", "largestLeafParams[2]"): (0.005, 0.12),
+    ("wheat", "vern_sens"): (0.8, 5.0),
+    ("wheat", "photop_sens"): (0.8, 5.0),
+    ("wheat", "tt_end_of_juvenile"): (260.0, 520.0),
+    ("wheat", "tt_floral_initiation"): (320.0, 700.0),
+    ("wheat", "tt_start_grain_fill"): (450.0, 760.0),
+    ("wheat", "max_grain_size"): (0.035, 0.075),
+    ("wheat", "rue"): (1.0, 3.5),
+    ("wheat", "largestLeafParams[1]"): (-3.0, 1.0),
+    ("wheat", "largestLeafParams[2]"): (0.005, 0.12),
 }
 
 
@@ -1324,6 +1447,286 @@ def mutate_wheat_stem_bias(base_params: dict, seed: int, profile_idx: int) -> di
     return p
 
 
+def sobol_param_key(crop: str, param_name: str) -> str:
+    return PARAM_ALIASES.get(crop, {}).get(param_name, param_name)
+
+
+def sobol_phase_to_crop_group(phase: str, crop_priority: str, k: int):
+    if phase.startswith("maize_"):
+        crop = "maize"
+    elif phase.startswith("wheat_"):
+        crop = "wheat"
+    elif crop_priority == "wheat_first":
+        crop = "wheat"
+    elif crop_priority == "balanced":
+        crop = "maize" if (k % 2 == 0) else "wheat"
+    else:
+        crop = "maize"
+
+    if phase.endswith("_phenology"):
+        group = "phenology"
+    elif phase.endswith("_yield_component"):
+        group = "yield_component"
+    elif phase == "biomass_canopy":
+        group = "biomass_canopy"
+    else:
+        group = "phenology"
+    return crop, group
+
+
+def infer_sobol_phase(baseline_eval: dict, args) -> str:
+    """根据当前 baseline 误差自动选择阶段；显式 --sobol_phase 会优先。"""
+    if args.sobol_phase != "auto":
+        return args.sobol_phase
+    crops = baseline_eval.get("crops", {})
+    maize_ph = (crops.get("maize") or {}).get("phenology_error_days_mean")
+    wheat_ph = (crops.get("wheat") or {}).get("phenology_error_days_mean")
+    guard = float(args.pheno_guard_days)
+    if args.crop_priority in ("maize_first", "balanced") and maize_ph is not None and float(maize_ph) > guard:
+        return "maize_phenology"
+    if args.crop_priority in ("wheat_first", "balanced") and wheat_ph is not None and float(wheat_ph) > guard:
+        return "wheat_phenology"
+    if args.crop_priority == "wheat_first":
+        return "wheat_yield_component"
+    return "maize_yield_component"
+
+
+def _signed_rel(sim, obs):
+    if sim is None or obs is None:
+        return None
+    try:
+        return (float(sim) - float(obs)) / max(abs(float(obs)), EPS)
+    except Exception:
+        return None
+
+
+def _mean_signed_rel_from_rows(rows: list, crop: str, variable_aliases: list):
+    vals = []
+    aliases = {_normalize_col_name(x) for x in variable_aliases}
+    for r in rows or []:
+        if str(r.get("crop", "")).lower() != crop:
+            continue
+        var = _normalize_col_name(r.get("variable") or r.get("variable_name"))
+        if var not in aliases:
+            continue
+        rel = _signed_rel(r.get("sim_value"), r.get("obs_value"))
+        if rel is not None:
+            vals.append(rel)
+    return mean_valid(vals)
+
+
+def build_sobol_diagnosis(baseline_eval: dict, baseline_rows: list | None = None) -> dict:
+    """抽取带方向的误差诊断，供 Sobol 分阶段突变决定上调/下调。"""
+    diag = {}
+    for crop in ("maize", "wheat"):
+        c = (baseline_eval.get("crops") or {}).get(crop) or {}
+        diag[f"{crop}_phenology_error_days_mean"] = c.get("phenology_error_days_mean")
+        diag[f"{crop}_period_bias_days"] = None
+        if c.get("sim_period_days") is not None and c.get("truth_period_days") is not None:
+            diag[f"{crop}_period_bias_days"] = float(c["sim_period_days"]) - float(c["truth_period_days"])
+        diag[f"{crop}_yield_bias_rel"] = _signed_rel(c.get("yield_sim_kg_ha"), c.get("yield_obs_kg_ha"))
+        diag[f"{crop}_grain_number_bias_rel"] = _mean_signed_rel_from_rows(
+            baseline_rows,
+            crop,
+            ["grain_number", "grain_no", "grainnum", "kernel_number", "grains_per_m2"],
+        )
+        diag[f"{crop}_grain_weight_bias_rel"] = _mean_signed_rel_from_rows(
+            baseline_rows,
+            crop,
+            ["grain_weight", "grain_wt", "grain_size", "kernel_weight", "1000_grain_weight"],
+        )
+    return diag
+
+
+def choose_sobol_param(crop: str, group: str, k: int, params: dict) -> str:
+    priority = SOBOL_PRIORITY.get(crop, {}).get(group, [])
+    available = [p for p in priority if sobol_param_key(crop, p) in params]
+    if not available:
+        raise ValueError(f"sobol_phased 阶段 {crop}.{group} 没有可解析的候选参数；请检查 XML 或解析函数。")
+    return available[k % len(available)]
+
+
+def pick_sobol_phased_action(k: int, baseline_eval: dict, args, current_state: dict, baseline_rows: list | None = None) -> dict:
+    phase = infer_sobol_phase(baseline_eval, args)
+    crop, group = sobol_phase_to_crop_group(phase, args.crop_priority, k)
+    params = current_state.get(f"{crop}_params") or {}
+    try:
+        param_name = choose_sobol_param(crop, group, k, params)
+    except ValueError:
+        if group != "biomass_canopy":
+            raise
+        alt_crop = "maize" if crop == "wheat" else "wheat"
+        alt_params = current_state.get(f"{alt_crop}_params") or {}
+        param_name = choose_sobol_param(alt_crop, group, k, alt_params)
+        crop = alt_crop
+    return {
+        "action": f"{crop}_cultivar",
+        "sobol_phase": phase,
+        "crop": crop,
+        "parameter_name": param_name,
+        "parameter_key": sobol_param_key(crop, param_name),
+        "parameter_group": group,
+        "diagnosis": build_sobol_diagnosis(baseline_eval, baseline_rows),
+    }
+
+
+def _sobol_effective_frac(step_scale: float, lo: float = 0.02, hi: float = 0.08) -> float:
+    # 命令行里的 step_scale 延续旧脚本语义；这里折算成每轮 2%-8% 的保守步幅。
+    return base.clamp(float(step_scale) * 0.35, lo, hi)
+
+
+def sobol_step(old_value: float, crop: str, param_name: str, step_scale: float) -> float:
+    p = sobol_param_key(crop, param_name)
+    old = abs(float(old_value))
+    if p.startswith("tt_") or p in ("tt_start_grain_fill", "tt_end_of_juvenile", "tt_floral_initiation"):
+        min_step = 2.0 if old < 100.0 else 10.0
+        return base.clamp(old * _sobol_effective_frac(step_scale), min_step, 50.0)
+    if p in ("photop_sens", "vern_sens"):
+        return base.clamp(float(step_scale), 0.05, 0.20)
+    if p == "max_grain_size":
+        return old * base.clamp(float(step_scale) * 0.25, 0.01, 0.05)
+    if p == "rue":
+        return old * base.clamp(float(step_scale) * 0.15, 0.01, 0.03)
+    if p.startswith("largestLeaf"):
+        return old * base.clamp(float(step_scale) * 0.25, 0.01, 0.05)
+    return old * _sobol_effective_frac(step_scale)
+
+
+def sobol_direction(crop: str, param_name: str, phase: str, diagnosis: dict) -> tuple[int, str, str, str]:
+    period_bias = diagnosis.get(f"{crop}_period_bias_days")
+    yield_bias = diagnosis.get(f"{crop}_yield_bias_rel")
+    grain_no_bias = diagnosis.get(f"{crop}_grain_number_bias_rel")
+    grain_wt_bias = diagnosis.get(f"{crop}_grain_weight_bias_rel")
+    p = sobol_param_key(crop, param_name)
+
+    # 正方向表示提高参数值，负方向表示降低参数值。
+    if "phenology" in phase:
+        if period_bias is not None and period_bias > 1:
+            return -1, "down", f"{crop} 模拟物候期偏长/偏晚 {period_bias:.1f} 天", "缩短相关热时间，促使发育提前"
+        if period_bias is not None and period_bias < -1:
+            return 1, "up", f"{crop} 模拟物候期偏短/偏早 {period_bias:.1f} 天", "延长相关热时间，推迟发育"
+        return 1, "up", f"{crop} 物候误差已接近阈值，采用小幅上调探索", "验证物候边界内的局部改进"
+
+    if "yield_component" in phase:
+        if p in ("tt_flag_to_flower", "tt_endjuv_to_init", "tt_floral_initiation", "tt_end_of_juvenile", "photop_sens", "vern_sens"):
+            b = grain_no_bias if grain_no_bias is not None else yield_bias
+            if b is not None and b < -0.03:
+                return 1, "up", f"{crop} 粒数/产量模拟偏低，signed_rel={b:.3f}", "延长开花前发育或增强响应，增加潜在库形成"
+            if b is not None and b > 0.03:
+                return -1, "down", f"{crop} 粒数/产量模拟偏高，signed_rel={b:.3f}", "缩短开花前发育或降低响应，避免过高库容量"
+        if p in ("tt_flower_to_maturity", "tt_start_grain_fill", "max_grain_size"):
+            b = grain_wt_bias if grain_wt_bias is not None else yield_bias
+            if b is not None and b < -0.03:
+                return 1, "up", f"{crop} 粒重/产量模拟偏低，signed_rel={b:.3f}", "增加灌浆持续时间或潜在粒重"
+            if b is not None and b > 0.03:
+                return -1, "down", f"{crop} 粒重/产量模拟偏高，signed_rel={b:.3f}", "降低灌浆持续时间或潜在粒重"
+        return 1, "up", f"{crop} 产量构成缺少直接 signed 诊断，按保守小步上调探索", "保持单参数、小步幅并由评分函数决定是否接受"
+
+    if "biomass_canopy" in phase:
+        if yield_bias is not None and yield_bias < -0.03:
+            return 1, "up", f"{crop} 产量模拟偏低，signed_rel={yield_bias:.3f}", "小幅提高光能利用或冠层能力"
+        if yield_bias is not None and yield_bias > 0.03:
+            return -1, "down", f"{crop} 产量模拟偏高，signed_rel={yield_bias:.3f}", "小幅降低光能利用或冠层能力"
+        return 1, "up", f"{crop} 冠层/生物量阶段无强 signed 诊断，保守小步探索", "只在物候守门通过时接受"
+
+    return 1, "up", "未识别阶段，保守小步探索", "由候选评分和物候守门决定是否接受"
+
+
+def clamp_sobol_param(crop: str, param_name: str, value: float) -> float:
+    bounds = PARAM_BOUNDS.get((crop, param_name))
+    if bounds is None:
+        bounds = PARAM_BOUNDS.get((crop, sobol_param_key(crop, param_name)))
+    if bounds is None:
+        return float(value)
+    return base.clamp(float(value), bounds[0], bounds[1])
+
+
+def mutate_sobol_param(base_params: dict, crop: str, param_name: str, diagnosis: dict, step_scale: float) -> tuple[dict, dict]:
+    p = dict(base_params)
+    key = sobol_param_key(crop, param_name)
+    if key not in p:
+        raise ValueError(f"{crop} 当前解析结果中缺少 Sobol 参数 {param_name} -> {key}")
+    old = float(p[key])
+    sign, direction, reason, expected = sobol_direction(crop, param_name, diagnosis.get("sobol_phase", ""), diagnosis)
+    step = sobol_step(old, crop, param_name, step_scale)
+    new = clamp_sobol_param(crop, param_name, old + sign * step)
+    if abs(new - old) <= 1e-12:
+        new = clamp_sobol_param(crop, param_name, old - sign * step)
+        direction = "down" if direction == "up" else "up"
+        reason = f"{reason}；原方向触及参数边界，已自动反向做小步测试"
+    p[key] = new
+    meta = {
+        "crop": crop,
+        "parameter_name": param_name,
+        "parameter_key": key,
+        "old_value": old,
+        "new_value": new,
+        "step": step,
+        "adjustment_direction": direction,
+        "diagnosis_reason": reason,
+        "expected_effect": expected,
+        "risk": "单参数变化仍可能改变 flowering/maturity；若物候守门不通过或综合评分变差，会自动回退。",
+    }
+    return p, meta
+
+
+def mutate_maize_sobol_param(base_params: dict, param_name: str, diagnosis: dict, step_scale: float, seed: int):
+    return mutate_sobol_param(base_params, "maize", param_name, diagnosis, step_scale)
+
+
+def mutate_wheat_sobol_param(base_params: dict, param_name: str, diagnosis: dict, step_scale: float, seed: int):
+    return mutate_sobol_param(base_params, "wheat", param_name, diagnosis, step_scale)
+
+
+def write_sobol_stage_alignment(path: Path, plan: dict, meta: dict, metrics: dict, accepted: bool) -> None:
+    b = metrics.get("baseline_custom", {})
+    c = metrics.get("candidate_custom", {})
+    comparison = metrics.get("comparison", {})
+    fields = [
+        "sobol_phase",
+        "crop",
+        "parameter_changed",
+        "old_value",
+        "new_value",
+        "adjustment_direction",
+        "diagnosis_reason",
+        "expected_effect",
+        "risk",
+        "baseline_score",
+        "candidate_score",
+        "whether_phenology_passed",
+        "whether_yield_component_improved",
+        "whether_total_score_improved",
+        "whether_candidate_accepted",
+    ]
+    row = {
+        "sobol_phase": plan.get("sobol_phase"),
+        "crop": meta.get("crop"),
+        "parameter_changed": meta.get("parameter_name"),
+        "old_value": meta.get("old_value"),
+        "new_value": meta.get("new_value"),
+        "adjustment_direction": meta.get("adjustment_direction"),
+        "diagnosis_reason": meta.get("diagnosis_reason"),
+        "expected_effect": meta.get("expected_effect"),
+        "risk": meta.get("risk"),
+        "baseline_score": b.get("custom_score"),
+        "candidate_score": c.get("custom_score"),
+        "whether_phenology_passed": c.get("phenology_error_days_max") is not None
+        and c.get("phenology_error_days_max") <= metrics.get("constraints", {}).get("phenology_error_days_max_le", 9999),
+        "whether_yield_component_improved": (
+            (c.get("group_scores") or {}).get("yield") is not None
+            and (b.get("group_scores") or {}).get("yield") is not None
+            and (c.get("group_scores") or {}).get("yield") <= (b.get("group_scores") or {}).get("yield")
+        ),
+        "whether_total_score_improved": comparison.get("custom_score_improvement_pct", 0) > 0,
+        "whether_candidate_accepted": accepted,
+    }
+    with path.open("w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fields)
+        w.writeheader()
+        w.writerow(row)
+
+
 def pick_action(k: int, baseline_eval: dict, mode: str):
     if mode == "wheat_focus":
         cycle = ["wheat_density_only", "wheat_cultivar", "wheat_fertilizer_only", "wheat_cultivar"]
@@ -1379,7 +1782,7 @@ def success_reached(
 def parse_args():
     p = argparse.ArgumentParser(description="Bio-first single-factor search with traceable outputs under process_bio/output")
     p.add_argument("--rounds", type=int, default=40)
-    p.add_argument("--pheno_guard_days", type=int, default=15)
+    p.add_argument("--pheno_guard_days", "--phenology_guard_days", dest="pheno_guard_days", type=int, default=10)
     p.add_argument("--target_bio_rel", type=float, default=0.30, help="target for total_biomass group rel error")
     p.add_argument("--target_structure_rel", type=float, default=0.45, help="target for structure_biomass_leaf_stem group rel error")
     p.add_argument("--target_yield_rel", type=float, default=0.06, help="target for yield group rel error")
@@ -1387,6 +1790,7 @@ def parse_args():
     p.add_argument("--target_phenology_norm", type=float, default=0.20, help="target for phenology normalized error group")
     p.add_argument("--soil_step_scale", type=float, default=0.15)
     p.add_argument("--maize_step_scale", type=float, default=0.25)
+    p.add_argument("--wheat_step_scale", type=float, default=0.15)
     p.add_argument("--wheat_density_step_scale", type=float, default=1.0)
     p.add_argument("--wheat_fert_step_scale", type=float, default=1.0)
     p.add_argument(
@@ -1400,9 +1804,30 @@ def parse_args():
         "--action_mode",
         type=str,
         default="mixed",
-        choices=["mixed", "wheat_focus", "conservative"],
+        choices=["mixed", "wheat_focus", "conservative", "sobol_phased"],
         help="mixed: joint search; wheat_focus: freeze maize and only adjust wheat variables; conservative: wheat_focus + occasional soil-only",
     )
+    p.add_argument(
+        "--sobol_phase",
+        type=str,
+        default="auto",
+        choices=["auto", "maize_phenology", "maize_yield_component", "wheat_phenology", "wheat_yield_component", "biomass_canopy"],
+        help="sobol_phased 模式的校准阶段；auto 会根据当前物候误差自动选择。",
+    )
+    p.add_argument(
+        "--crop_priority",
+        type=str,
+        default="maize_first",
+        choices=["maize_first", "wheat_first", "balanced"],
+        help="sobol_phased 自动阶段和同阶段作物顺序。",
+    )
+    p.add_argument(
+        "--cultivar_only",
+        action="store_true",
+        default=False,
+        help="只允许修改 Wheat.xml / Maize.xml 中的品种参数；sobol_phased 模式会强制启用。",
+    )
+    p.add_argument("--max_params_per_iter", type=int, default=1, help="sobol_phased 每轮最多修改的品种参数数；当前实现默认单参数。")
     p.add_argument("--wheat_density_min", type=float, default=70.0)
     p.add_argument("--wheat_density_max", type=float, default=380.0)
     p.add_argument("--wheat_anchor_weight", type=float, default=0.20)
@@ -1436,6 +1861,9 @@ def parse_args():
 
 def main():
     args = parse_args()
+    if args.action_mode == "sobol_phased":
+        args.cultivar_only = True
+        args.max_params_per_iter = max(1, min(2, int(args.max_params_per_iter)))
     PROCESS_BIO.mkdir(parents=True, exist_ok=True)
     BEST_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -1494,8 +1922,22 @@ def main():
         base.run_apsim_on_truth(out_base / "truth.apsim")
         baseline_eval = base.evaluate_output_dir(out_base, truth_obj)
         baseline_anchor = extract_wheat_anchor_metrics(out_base, truth_obj, args.wheat_late_stage_cn)
+        baseline_rows_for_diag = collect_prediction_vs_truth_rows(out_base, truth_obj, "baseline")
 
-        action = pick_action(k, baseline_eval, args.action_mode)
+        sobol_plan = None
+        sobol_meta = {}
+        if args.action_mode == "sobol_phased":
+            current_state = {
+                "wheat_params": base.parse_wheat_params(wheat_before, current_best_wheat),
+                "maize_params": base.parse_maize_params(maize_before, current_best_maize),
+            }
+            sobol_plan = pick_sobol_phased_action(k, baseline_eval, args, current_state, baseline_rows_for_diag)
+            sobol_plan["diagnosis"]["sobol_phase"] = sobol_plan["sobol_phase"]
+            action = sobol_plan["action"]
+        else:
+            action = pick_action(k, baseline_eval, args.action_mode)
+            if args.cultivar_only and action not in ("wheat_cultivar", "maize_cultivar"):
+                action = "maize_cultivar" if (args.crop_priority != "wheat_first" and k % 2 == 0) else "wheat_cultivar"
         truth_after = truth_before
         wheat_after = wheat_before
         maize_after = maize_before
@@ -1506,7 +1948,15 @@ def main():
 
         if action == "wheat_cultivar":
             p0 = base.parse_wheat_params(wheat_before, current_best_wheat)
-            if args.wheat_cultivar_mode == "standard":
+            if sobol_plan and sobol_plan.get("crop") == "wheat":
+                p1, sobol_meta = mutate_wheat_sobol_param(
+                    p0,
+                    sobol_plan["parameter_name"],
+                    sobol_plan["diagnosis"],
+                    args.wheat_step_scale,
+                    20260424 + iter_no,
+                )
+            elif args.wheat_cultivar_mode == "standard":
                 p1 = base.mutate_wheat(p0, 20260424 + iter_no, k)
             elif args.wheat_cultivar_mode == "stem_bias":
                 p1 = mutate_wheat_stem_bias(p0, 20260424 + iter_no, k)
@@ -1534,6 +1984,13 @@ def main():
                     "potential_grain_filling_rate",
                 ],
             )
+            if sobol_meta:
+                changed = {
+                    sobol_meta["parameter_name"]: {
+                        "from": sobol_meta["old_value"],
+                        "to": sobol_meta["new_value"],
+                    }
+                }
             cultivar_changes.append(
                 {
                     "crop": "wheat",
@@ -1544,7 +2001,16 @@ def main():
             )
         elif action == "maize_cultivar":
             p0 = base.parse_maize_params(maize_before, current_best_maize)
-            p1 = base.mutate_maize_yield_pullback(p0, 20260424 + iter_no, k, args.maize_step_scale)
+            if sobol_plan and sobol_plan.get("crop") == "maize":
+                p1, sobol_meta = mutate_maize_sobol_param(
+                    p0,
+                    sobol_plan["parameter_name"],
+                    sobol_plan["diagnosis"],
+                    args.maize_step_scale,
+                    20260424 + iter_no,
+                )
+            else:
+                p1 = base.mutate_maize_yield_pullback(p0, 20260424 + iter_no, k, args.maize_step_scale)
             name = base.next_maize_name(maize_before, iter_no)
             maize_after = base.append_maize_cultivar(maize_before, name, p1)
             truth_after = base.set_manager_cultivar(truth_after, "Maize Management", name)
@@ -1565,6 +2031,13 @@ def main():
                     "leaf_no_dead_slope",
                 ],
             )
+            if sobol_meta:
+                changed = {
+                    sobol_meta["parameter_name"]: {
+                        "from": sobol_meta["old_value"],
+                        "to": sobol_meta["new_value"],
+                    }
+                }
             cultivar_changes.append(
                 {
                     "crop": "maize",
@@ -1617,7 +2090,7 @@ def main():
         base.run_apsim_on_truth(out_cand / "truth.apsim")
         candidate_eval = base.evaluate_output_dir(out_cand, truth_obj)
         candidate_anchor = extract_wheat_anchor_metrics(out_cand, truth_obj, args.wheat_late_stage_cn)
-        baseline_rows = collect_prediction_vs_truth_rows(out_base, truth_obj, "baseline")
+        baseline_rows = baseline_rows_for_diag
         candidate_rows = collect_prediction_vs_truth_rows(out_cand, truth_obj, "candidate")
 
         metrics = build_metrics(
@@ -1669,15 +2142,56 @@ def main():
             "risk": "过度优化生物量可能拉高产量误差或导致物候偏移。",
             "revert_note": "可通过 process_bio/output/best（或旧目录 processing/best）中的快照回退。",
         }
+        if sobol_plan:
+            manifest.update(
+                {
+                    "calibration_mode": "sobol_phased",
+                    "sobol_phase": sobol_plan.get("sobol_phase"),
+                    "crop": sobol_meta.get("crop"),
+                    "parameter_changed": sobol_meta.get("parameter_name"),
+                    "old_value": sobol_meta.get("old_value"),
+                    "new_value": sobol_meta.get("new_value"),
+                    "adjustment_direction": sobol_meta.get("adjustment_direction"),
+                    "diagnosis_reason": sobol_meta.get("diagnosis_reason"),
+                    "expected_effect": sobol_meta.get("expected_effect"),
+                    "risk": sobol_meta.get("risk"),
+                    "whether_phenology_passed": pheno_ok,
+                    "whether_yield_component_improved": (
+                        (c_custom.get("group_scores") or {}).get("yield") is not None
+                        and (b_custom.get("group_scores") or {}).get("yield") is not None
+                        and (c_custom.get("group_scores") or {}).get("yield") <= (b_custom.get("group_scores") or {}).get("yield")
+                    ),
+                    "whether_total_score_improved": metrics["comparison"]["custom_score_improvement_pct"] > 0,
+                    "whether_candidate_accepted": better,
+                    "reason": f"Sobol 分阶段品种参数校准：阶段 {sobol_plan.get('sobol_phase')}，优先根据敏感性和 signed 误差诊断微调 {sobol_meta.get('crop')}.{sobol_meta.get('parameter_name')}。",
+                    "expected_effect": sobol_meta.get("expected_effect"),
+                }
+            )
         base.ensure_manifest_cn(manifest)
         g = c_custom.get("group_scores", {})
+        sobol_summary = ""
+        if sobol_plan:
+            sobol_summary = (
+                f"\nSobol 分阶段校准信息\n"
+                f"- 阶段：{sobol_plan.get('sobol_phase')}\n"
+                f"- 作物：{sobol_meta.get('crop')}\n"
+                f"- 参数：{sobol_meta.get('parameter_name')}\n"
+                f"- 修改方向：{sobol_meta.get('adjustment_direction')}\n"
+                f"- from -> to：{base.cn(sobol_meta.get('old_value'), 6)} -> {base.cn(sobol_meta.get('new_value'), 6)}\n"
+                f"- 诊断依据：{sobol_meta.get('diagnosis_reason')}\n"
+                f"- 预期影响：{sobol_meta.get('expected_effect')}\n"
+                f"- 风险控制：{sobol_meta.get('risk')}\n"
+                f"- 物候守门是否通过：{'是' if pheno_ok else '否'}\n"
+                f"- 候选是否接受：{'是' if better else '否'}\n\n"
+            )
         summary = (
             f"第 {iter_no} 轮完成\n\n"
             f"一、本轮目标\n"
-            f"- 优化对象：小麦与玉米（生物量优先）\n"
+            f"- 优化对象：{'Sobol 分阶段品种参数校准' if sobol_plan else '小麦与玉米（生物量优先）'}\n"
             f"- 迭代策略：{scope}\n"
             f"- 评分模式：{metrics.get('score_mode')}\n"
             f"- 物候约束：max(小麦/玉米物候误差) <= {args.pheno_guard_days} 天\n\n"
+            f"{sobol_summary}"
             f"二、本轮修改\n"
             f"- 新增品种：{', '.join([x['new_cultivar'] for x in cultivar_changes]) if cultivar_changes else '无'}\n"
             f"- 继承来源：{', '.join([x['derived_from'] for x in cultivar_changes]) if cultivar_changes else '无'}\n"
@@ -1725,7 +2239,10 @@ def main():
             b_custom,
             c_custom,
         )
-        base.write_stage_alignment(iter_dir / "stage_alignment.csv")
+        if sobol_plan:
+            write_sobol_stage_alignment(iter_dir / "stage_alignment.csv", sobol_plan, sobol_meta, metrics, better)
+        else:
+            base.write_stage_alignment(iter_dir / "stage_alignment.csv")
         base.write_patch(truth_before, truth_after, wheat_before, wheat_after, maize_before, maize_after, iter_dir / "patch.diff")
 
         cand_w = base.get_manager_cultivar(truth_after, "Wheat Management")
@@ -1756,7 +2273,10 @@ def main():
             base.write_text(BEST_DIR / "summary_zh.md", summary)
             shutil.copy2(iter_dir / "prediction_vs_truth.csv", BEST_DIR / "prediction_vs_truth.csv")
             shutil.copy2(iter_dir / "prediction_vs_truth_summary.md", BEST_DIR / "prediction_vs_truth_summary.md")
-            base.write_stage_alignment(BEST_DIR / "stage_alignment.csv")
+            if sobol_plan:
+                shutil.copy2(iter_dir / "stage_alignment.csv", BEST_DIR / "stage_alignment.csv")
+            else:
+                base.write_stage_alignment(BEST_DIR / "stage_alignment.csv")
             base.write_text(
                 BEST_DIR / "best_selection.json",
                 json.dumps(
@@ -1798,7 +2318,10 @@ def main():
             args.target_phenology_norm,
         )
         print(
-            f"iter_{iter_no:03d}: action={action} better={better} "
+            f"iter_{iter_no:03d}: action={action} "
+            f"phase={(sobol_plan or {}).get('sobol_phase', 'NA')} "
+            f"param={sobol_meta.get('parameter_name', 'NA')} "
+            f"better={better} "
             f"custom={c_custom['custom_score']:.6f} "
             f"bio={c_custom['total_biomass_error_rel_mean_all_crops']:.6f} "
             f"yield={c_custom['yield_error_rel_mean']:.6f} "

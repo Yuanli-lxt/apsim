@@ -36,7 +36,8 @@ DEFAULT_TARGET_VARIABLES = [
     "lai",
     "grain_number",
     "grain_weight",
-    "water_use_efficiency",
+    "water_use_efficiency_yield",
+    "water_use_efficiency_biomass",
 ]
 
 

@@ -243,6 +243,7 @@ def main() -> None:
         sim_index["run_status"] = sim_index["sample_id"].map(status_map).fillna(
             sim_index["run_status"] if "run_status" in sim_index.columns else "not_run"
         )
+        sim_index["status"] = sim_index["run_status"]
         sim_index.to_csv(SIM_INDEX_CSV, index=False, encoding="utf-8-sig")
         logger.info("批量运行完成，已更新: %s", SIM_INDEX_CSV)
 

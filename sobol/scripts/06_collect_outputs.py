@@ -76,10 +76,18 @@ VARIABLE_MAP = {
         "transpiration": [
             "wheat.transpiration_tot",
             "WheatTranspirationTotal",
+            "WheatWaterUptakeDailySum",
+            "WheatWaterUptakeTotal",
             "wheat.transpiration",
             "WheatTranspirationDaily",
             "transpiration_tot",
             "crop_transpiration",
+        ],
+        "water_uptake": [
+            "WheatWaterUptakeDailySum",
+            "WheatWaterUptakeTotal",
+            "wheat.sw_uptake",
+            "WheatWaterUptakeArray",
         ],
         "transpiration_efficiency": ["wheat.transp_eff", "WheatTranspirationEfficiency", "transp_eff"],
         "soil_evaporation": [
@@ -104,34 +112,15 @@ VARIABLE_MAP = {
         "biomass": ["paddock.maize.biomass", "MaizeBio", "maize.Biomass", "biomass"],
         "lai": ["maizelai", "maize.lai", "paddock.maize.lai", "lai"],
         "grain_number": [
-            "maize.grain_no",
-            "maize.grain_number",
-            "maize.kernel_no",
-            "maize.kernel_number",
-            "MaizeGrainNo",
-            "MaizeGrainNumber",
-            "MaizeKernelNumber",
-            "grain_number",
-            "grain number",
-            "kernel number",
-            "grain_no",
-            "grainno",
+            "MaizeGrainNoCapital",
+            "maize.GrainNo",
+            "MaizeGrainNumberCapital",
         ],
         "grain_weight": [
-            "maize.grain_size",
-            "MaizeGrainSize",
-            "maize.grain_weight",
-            "grain_weight",
-            "grain weight",
-            "grain wt",
-            "grain_size",
-            "grain size",
-            "kernel weight",
-            "maize.grain_wt",
-            "maize.kernel_weight",
-            "MaizeGrainWt",
-            "MaizeGrainWeight",
-            "MaizeKernelWeight",
+            "MaizeGrainSizeCapital",
+            "maize.GrainSize",
+            "MaizeGrainGreenWtCapital",
+            "maize.GrainGreenWt",
         ],
         "water_use_efficiency": ["maize.WUE", "MaizeWUE", "water_use_efficiency", "WUE", "water use efficiency"],
         "evapotranspiration": [
@@ -182,6 +171,7 @@ EXTRACT_VARIABLES = [
     "potential_evapotranspiration",
     "transpiration",
     "transpiration_efficiency",
+    "water_uptake",
     "soil_evaporation",
     "potential_soil_evaporation",
     "runoff",
@@ -220,6 +210,7 @@ AGGREGATION_METHOD = {
     "potential_evapotranspiration": "max",
     "transpiration": "max",
     "transpiration_efficiency": "max",
+    "water_uptake": "sum_by_date",
     "drainage": "max",
     # daily flux variables: sum once per date where possible
     "soil_evaporation": "sum_by_date",
@@ -312,10 +303,74 @@ def max_numeric_with_source(df: pd.DataFrame, candidates, exclude_substrings=Non
     return float(vals.max()), col
 
 
-def aggregate_numeric_with_source(df: pd.DataFrame, candidates, method: str = "max", exclude_substrings=None) -> tuple[float | None, str]:
+def crop_yield_candidates(crop: str) -> list[str]:
+    if crop == "wheat":
+        return ["paddock.wheat.yield", "WheatYield", "wheat.Yield"]
+    if crop == "maize":
+        return ["paddock.maize.yield", "MaizeYield", "maize.Yield"]
+    return [f"{crop}.yield", f"{crop}Yield", "yield"]
+
+
+def crop_harvest_date(df: pd.DataFrame, crop: str):
+    date_col = find_first_column(df.columns, ["Date"])
+    if date_col is None:
+        return None
+    yield_col = find_first_column_filtered(df.columns, crop_yield_candidates(crop), None)
+    if yield_col is None:
+        return None
+    vals = pd.to_numeric(df[yield_col], errors="coerce")
+    dates = pd.to_datetime(df[date_col], errors="coerce")
+    valid = vals.notna() & dates.notna() & (vals > 0)
+    if not valid.any():
+        return None
+    max_yield = vals[valid].max()
+    max_rows = valid & (vals == max_yield)
+    if not max_rows.any():
+        return None
+    return dates[max_rows].min()
+
+
+def filter_to_crop_state(df: pd.DataFrame, crop: str) -> pd.DataFrame:
+    """Keep the active crop-season window used for seasonal water sums.
+
+    APSIM rotation outputs may contain the same crop again after the target
+    harvest. For flux variables such as soil evaporation and water uptake, we
+    therefore trim rows to the crop state and to the season ending at the first
+    date of maximum crop yield. If rotationNumber is available, we also keep
+    only the matching rotation cycle to avoid including pre-sowing rows.
+    """
+    state_col = find_first_column(df.columns, ["currentState", "crop", "state"])
+    if state_col is None:
+        return df
+    mask = df[state_col].astype(str).str.lower().str.strip() == str(crop).lower().strip()
+    if not mask.any():
+        return df
+    out = df.loc[mask].copy()
+
+    date_col = find_first_column(out.columns, ["Date"])
+    harvest_date = crop_harvest_date(df, crop)
+    if date_col is not None and harvest_date is not None:
+        dates = pd.to_datetime(out[date_col], errors="coerce")
+        out = out.loc[dates.notna() & (dates <= harvest_date)].copy()
+
+        rot_col = find_first_column(out.columns, ["rotationNumber", "rotation"])
+        if rot_col is not None and not out.empty:
+            dates = pd.to_datetime(out[date_col], errors="coerce")
+            rots = pd.to_numeric(out[rot_col], errors="coerce")
+            before_harvest = dates.notna() & (dates <= harvest_date) & rots.notna()
+            if before_harvest.any():
+                target_rotation = rots.loc[before_harvest].max()
+                out = out.loc[rots == target_rotation].copy()
+
+    return out if not out.empty else df.loc[mask].copy()
+
+
+def aggregate_numeric_with_source(df: pd.DataFrame, candidates, method: str = "max", exclude_substrings=None, crop: str = "") -> tuple[float | None, str]:
     col = find_first_column_filtered(df.columns, candidates, exclude_substrings)
     if col is None:
         return None, ""
+    if method == "sum_by_date" and crop:
+        df = filter_to_crop_state(df, crop)
     vals = pd.to_numeric(df[col], errors="coerce")
     if vals.dropna().empty:
         return None, col
@@ -337,12 +392,42 @@ def aggregate_numeric_with_source(df: pd.DataFrame, candidates, method: str = "m
     return float(vals.max()), col
 
 
+def aggregate_layer_columns_with_source(df: pd.DataFrame, prefixes, crop: str = "") -> tuple[float | None, str]:
+    """把逐层日通量列先逐日求层和，再跨日期累加。
+
+    APSIM Classic 的 outputfile 同一天可能因 transition/end_day/harvesting 重复输出。
+    因此这里先按日期取每层最大值，再对层和进行跨日期累计。
+    """
+    prefixes_l = [p.lower() for p in prefixes]
+    layer_cols = [
+        col
+        for col in df.columns
+        if any(str(col).lower().startswith(prefix) for prefix in prefixes_l)
+    ]
+    if not layer_cols:
+        return None, ""
+    if crop:
+        df = filter_to_crop_state(df, crop)
+    numeric = df[layer_cols].apply(pd.to_numeric, errors="coerce")
+    if numeric.dropna(how="all").empty:
+        return None, ";".join(layer_cols)
+    date_col = find_first_column(df.columns, ["Date"])
+    if date_col is not None:
+        temp = numeric.copy()
+        temp["_date"] = pd.to_datetime(df[date_col], errors="coerce")
+        if temp["_date"].notna().any():
+            daily_layers = temp.groupby("_date", dropna=False)[layer_cols].max()
+            return float(daily_layers.sum(axis=1, skipna=True).sum()), ";".join(layer_cols)
+    return float(numeric.sum(axis=1, skipna=True).sum()), ";".join(layer_cols)
+
+
 def update_value(out: dict, source_cols: dict, mapping_rows: list, df: pd.DataFrame, var: str, candidates, sid, crop, cultivar):
     val, col = aggregate_numeric_with_source(
         df,
         candidates,
         AGGREGATION_METHOD.get(var, "max"),
         EXCLUDE_SOURCE_SUBSTRINGS.get(var),
+        crop,
     )
     if val is None:
         return
@@ -418,6 +503,7 @@ def main() -> None:
                 "potential_evapotranspiration": None,
                 "transpiration": None,
                 "transpiration_efficiency": None,
+                "water_uptake": None,
                 "soil_evaporation": None,
                 "potential_soil_evaporation": None,
                 "runoff": None,
@@ -441,10 +527,46 @@ def main() -> None:
                 for var in EXTRACT_VARIABLES:
                     update_value(out, source_cols, mapping_rows, df, var, maps.get(var, []), sid, crop, cultivar)
 
+                if crop == "wheat":
+                    uptake_val, uptake_cols = aggregate_layer_columns_with_source(
+                        df,
+                        ["WheatWaterUptake"],
+                        crop,
+                    )
+                    if uptake_val is not None:
+                        out["water_uptake"] = max_ignore_none(out.get("water_uptake"), uptake_val)
+                        source_cols["water_uptake_source_column"] = append_unique(
+                            source_cols.get("water_uptake_source_column", ""), uptake_cols
+                        )
+                        mapping_rows.append(
+                            {
+                                "sample_id": sid,
+                                "crop": crop,
+                                "cultivar": cultivar,
+                                "standard_variable": "water_uptake",
+                                "source_column": uptake_cols,
+                                "source_output_file": df["_source_output_file"].iloc[0],
+                            }
+                        )
+
                 if out["flowering_date"] is None:
                     out["flowering_date"] = first_stage_date(df, crop, ["flower", "anthesis"])
                 if out["maturity_date"] is None:
                     out["maturity_date"] = first_stage_date(df, crop, ["matur", "ripe", "harvest_ripe"])
+
+            if is_missing(out["evapotranspiration"]) and not is_missing(out["transpiration"]) and not is_missing(out["soil_evaporation"]):
+                out["evapotranspiration"] = float(out["transpiration"]) + float(out["soil_evaporation"])
+                source_cols["evapotranspiration_source_column"] = append_unique(
+                    append_unique(source_cols["evapotranspiration_source_column"], source_cols["transpiration_source_column"]),
+                    source_cols["soil_evaporation_source_column"],
+                )
+
+            if is_missing(out["transpiration"]) and not is_missing(out["water_uptake"]):
+                out["transpiration"] = float(out["water_uptake"])
+                source_cols["transpiration_source_column"] = append_unique(
+                    source_cols["transpiration_source_column"],
+                    source_cols["water_uptake_source_column"],
+                )
 
             if is_missing(out["evapotranspiration"]) and not is_missing(out["transpiration"]) and not is_missing(out["soil_evaporation"]):
                 out["evapotranspiration"] = float(out["transpiration"]) + float(out["soil_evaporation"])
