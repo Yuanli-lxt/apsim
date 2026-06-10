@@ -20,7 +20,7 @@ from pathlib import Path
 import run_process_bio_search as search
 
 
-ROOT = Path(r"F:\APSIM710-r4221\process_bio")
+ROOT = Path(__file__).resolve().parents[1]
 OUT_ROOT = ROOT / "output_hdsw_sobol_water_yield"
 BEST_DIR = OUT_ROOT / "best"
 VALIDATION_CSV = ROOT / "independent_validation_observations_p02_maize_p01_wheat.csv"

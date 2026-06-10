@@ -1,0 +1,6 @@
+ApsimVersion = 7.10 r4221
+Title = Rotation Sample Harvest
+           Date paddock.wheat.yield paddock.maize.yield paddock.wheat.biomass paddock.maize.biomass
+   (dd/mm/yyyy)             (kg/ha)             (kg/ha)               (kg/ha)               (kg/ha)
+     01/06/2025              7088.0                 0.0               16600.7                   0.0
+     05/10/2025                 0.0              9382.4                   0.0               16448.8

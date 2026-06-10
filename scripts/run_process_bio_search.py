@@ -15,17 +15,19 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-PROCESSING_DIR = Path(__file__).resolve().parents[1] / "processing"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+APSIM_ROOT = PROJECT_ROOT.parent
+PROCESSING_DIR = APSIM_ROOT / "processing"
 if str(PROCESSING_DIR) not in sys.path:
     sys.path.insert(0, str(PROCESSING_DIR))
 
 import run_joint_single_factor_rounds as base
 
 
-DEFAULT_OUTPUT_DIR = Path(r"F:\APSIM710-r4221\process_bio\output_sobol")
-DEFAULT_HDSW_OUTPUT_DIR = Path(r"F:\APSIM710-r4221\process_bio\output_hdsw_water_yield")
-DEFAULT_HDSW_SOIL_SOURCE = Path(r"F:\APSIM710-r4221\process_bio\output_hdsw\output\best\truth.apsim")
-DEFAULT_HDSW_SEED_DIR = Path(r"F:\APSIM710-r4221\process_bio\output_sobol\best")
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "output_sobol"
+DEFAULT_HDSW_OUTPUT_DIR = PROJECT_ROOT / "output_hdsw_water_yield"
+DEFAULT_HDSW_SOIL_SOURCE = PROJECT_ROOT / "output_hdsw" / "output" / "best" / "truth.apsim"
+DEFAULT_HDSW_SEED_DIR = PROJECT_ROOT / "output_sobol" / "best"
 DEFAULT_WHEAT_CULTIVAR = "Jimai70_v132_joint_iter353"
 DEFAULT_MAIZE_CULTIVAR = "P01_shandong_2025_v527_joint_iter3"
 
@@ -33,8 +35,8 @@ PROCESS_BIO = DEFAULT_OUTPUT_DIR
 INDEX_PATH = PROCESS_BIO / "iteration_index.csv"
 BEST_DIR = PROCESS_BIO / "best"
 WHEAT_LATE_STAGE_CN_DEFAULT = "蜡熟期"
-DEFAULT_VALIDATION_CSV = Path(__file__).resolve().parent / "independent_validation_observations_p02_maize_p01_wheat.csv"
-DEFAULT_TRUTH_TEMPLATE = Path(__file__).resolve().parent / "modified_from_truth.apsim"
+DEFAULT_VALIDATION_CSV = PROJECT_ROOT / "independent_validation_observations_p02_maize_p01_wheat.csv"
+DEFAULT_TRUTH_TEMPLATE = PROJECT_ROOT / "modified_from_truth.apsim"
 EPS = 1e-9
 
 

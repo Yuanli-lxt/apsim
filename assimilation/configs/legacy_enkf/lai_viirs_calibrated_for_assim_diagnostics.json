@@ -1,0 +1,20 @@
+{
+  "model": "huber_linear",
+  "slope": -3.448769309728101,
+  "intercept": 6.167377374329117,
+  "rmse_linear": 1.1446064469442268,
+  "rmse_ratio": 2.767425704266575,
+  "rmse_best": 1.1446064469442268,
+  "n_pairs": 10.0,
+  "rmse_temporal_ratio": 0.8730589559032526,
+  "model_used": "temporal_ratio_interp",
+  "slope_used": NaN,
+  "intercept_used": NaN,
+  "rmse_used": 0.8730589559032526,
+  "obs_std_assigned": 0.8730589559032526,
+  "tol_days": 5,
+  "viirs_csv": "mission\\LAI_VIIRS_VNP15A2H_Point_2024_2025.csv",
+  "truth_xls": "mission\\LAI真值.xls",
+  "truth_sheet": "Sheet1",
+  "output_obs_csv": "mission\\lai_viirs_calibrated_for_assim_obs.csv"
+}

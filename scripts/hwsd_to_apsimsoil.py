@@ -22,6 +22,8 @@ try:
 except Exception:  # pragma: no cover
     gpd = None
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
 try:
     import pyodbc  # type: ignore
 except Exception:  # pragma: no cover
@@ -1147,9 +1149,9 @@ def main() -> None:
     parser.add_argument("--crop", default="Wheat", help="Crop name (default: Wheat)")
     parser.add_argument(
         "--outdir",
-        default=Path(r"F:\APSIM710-r4221\process_bio\hdsw"),
+        default=PROJECT_ROOT / "hdsw",
         type=Path,
-        help="Output directory (default: F:\\APSIM710-r4221\\process_bio\\hdsw)",
+        help="Output directory (default: project hdsw directory)",
     )
     parser.add_argument("--field-map-file", default=None, type=Path, help="JSON file to override FIELD_MAP")
     parser.add_argument("--airdry-ratio", default=0.5, type=float, help="AirDry ratio to LL15 (default 0.5)")

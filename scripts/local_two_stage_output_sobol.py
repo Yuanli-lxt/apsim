@@ -22,11 +22,11 @@ from pathlib import Path
 import run_process_bio_search as search
 
 
-ROOT = Path(r"F:\APSIM710-r4221\process_bio")
+ROOT = Path(__file__).resolve().parents[1]
 OUT_ROOT = ROOT / "output_sobol"
 BEST_DIR = OUT_ROOT / "best"
 VALIDATION_CSV = ROOT / "independent_validation_observations_p02_maize_p01_wheat.csv"
-CODEX_TRUTH = Path(r"F:\APSIM710-r4221\codex\truth.apsim")
+CODEX_TRUTH = ROOT.parent / "codex" / "truth.apsim"
 
 BASE_SOIL = 0.2547055
 BASE_WHEAT_YIELD = 0.1062

@@ -22,11 +22,11 @@ from pathlib import Path
 import run_process_bio_search as search
 
 
-ROOT = Path(r"F:\APSIM710-r4221\process_bio")
+ROOT = Path(__file__).resolve().parents[1]
 OUT_ROOT = ROOT / "output_sobol"
 BEST_DIR = OUT_ROOT / "best"
 VALIDATION_CSV = ROOT / "independent_validation_observations_p02_maize_p01_wheat.csv"
-CODEX_TRUTH = Path(r"F:\APSIM710-r4221\codex\truth.apsim")
+CODEX_TRUTH = ROOT.parent / "codex" / "truth.apsim"
 
 FRACTION_VALUES = [round(v, 3) for v in [0.546, 0.547, 0.548, 0.549, 0.550, 0.551, 0.552]]
 

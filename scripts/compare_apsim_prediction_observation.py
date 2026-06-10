@@ -11,16 +11,14 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 # User configuration
 # =============================================================================
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
 # Use raw strings or pathlib.Path to avoid Windows backslash problems.
-truth_file = Path(
-    r"F:\APSIM710-r4221\process_bio\independent_validation_observations_p02_maize_p01_wheat.csv"
-)
+truth_file = PROJECT_ROOT / "independent_validation_observations_p02_maize_p01_wheat.csv"
 
-prediction_file = Path(
-    r"F:\APSIM710-r4221\process_bio\output\iter_981\outputs\candidate\Rotation Sample Phases.out"
-)
+prediction_file = PROJECT_ROOT / "output" / "iter_981" / "outputs" / "candidate" / "Rotation Sample Phases.out"
 
-output_dir = Path.cwd() / "figures"
+output_dir = PROJECT_ROOT / "figures"
 
 # Matching keys. Each tuple is:
 #     (column name in truth data, column name in prediction data)

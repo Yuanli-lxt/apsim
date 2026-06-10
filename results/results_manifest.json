@@ -1,0 +1,38 @@
+﻿[
+    {
+        "old_entry":  "output",
+        "archived_at":  "results/legacy_bio_search_20260506_output",
+        "compatibility_entry_type":  "junction",
+        "junction_target":  "F:\\APSIM710-r4221\\process_bio\\results\\legacy_bio_search_20260506_output",
+        "files":  23600,
+        "size_mb":  4393.24,
+        "note":  "early bio-first iterative search"
+    },
+    {
+        "old_entry":  "output_hdsw",
+        "archived_at":  "results/hdsw_single_validation_20260513_output_hdsw",
+        "compatibility_entry_type":  "junction",
+        "junction_target":  "F:\\APSIM710-r4221\\process_bio\\results\\hdsw_single_validation_20260513_output_hdsw",
+        "files":  2326,
+        "size_mb":  442.66,
+        "note":  "HDSW/HWSD soil replacement validation"
+    },
+    {
+        "old_entry":  "output_hdsw_sobol_water_yield",
+        "archived_at":  "results/hdsw_water_yield_search_20260519_output_hdsw_sobol_water_yield",
+        "compatibility_entry_type":  "junction",
+        "junction_target":  "F:\\APSIM710-r4221\\process_bio\\results\\hdsw_water_yield_search_20260519_output_hdsw_sobol_water_yield",
+        "files":  1463,
+        "size_mb":  298.44,
+        "note":  "HDSW water-yield matrix/search run"
+    },
+    {
+        "old_entry":  "output_sobol",
+        "archived_at":  "results/local_sobol_guided_search_20260519_output_sobol",
+        "compatibility_entry_type":  "junction",
+        "junction_target":  "F:\\APSIM710-r4221\\process_bio\\results\\local_sobol_guided_search_20260519_output_sobol",
+        "files":  4944,
+        "size_mb":  1014.13,
+        "note":  "local Sobol-guided search and backups"
+    }
+]
