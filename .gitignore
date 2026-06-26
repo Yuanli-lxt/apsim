@@ -7,27 +7,58 @@
 # 项目说明和索引文档。
 !.gitignore
 !/PROJECT_STRUCTURE.md
+!/docs/
+!/docs/**/*.md
+!/docs/**/*.json
 
-# Python 代码统一放在 scripts/；Sobol 流程脚本仍保留在 sobol/scripts/。
+# Python 代码统一放在 scripts/。
 !/scripts/
-!/scripts/*.py
-!/sobol/
-!/sobol/scripts/
-!/sobol/scripts/*.py
+!/scripts/**/*.py
+
+# 轻量配置可以追踪；大型数据仍默认忽略。
+!/configs/
+!/configs/**/*.json
+!/configs/**/*.md
 
 # results/ 只保留索引，不追踪大型结果文件。
 !/results/
 /results/*
 !/results/README.md
-!/results/results_manifest.json
+!/results/manifests/
+!/results/manifests/*.json
 
-# assimilation/ 只追踪迁移来的脚本；数据、配置、文档和测试结果都留本地。
-!/assimilation/
-/assimilation/**
-!/assimilation/scripts/
-!/assimilation/scripts/**/
-!/assimilation/scripts/**/*.py
-/assimilation/**/__pycache__/
+# 结构目录本身保留，但数据和输出不追踪。
+!/data/
+!/models/
+!/src/
+!/notebooks/
+!/tests/
+/data/**
+/outputs/**
+/output/
+/output_hdsw/
+/output_hdsw_sobol_water_yield/
+/output_sobol/
+!/models/apsim_classic/
+!/models/apsim_classic/*.apsim
+!/models/apsimx_optional/
+!/models/apsimx_optional/*.json
+!/data/processed/
+!/data/processed/observations/
+!/data/processed/observations/*.csv
+!/data/processed/soil/
+!/data/processed/soil/*.csv
+!/data/processed/soil/*.json
+!/data/processed/soil/*.txt
+!/data/weather/
+!/data/weather/apsim_met/
+!/data/weather/apsim_met/*.met
+!/src/
+!/src/**/
+!/notebooks/
+!/tests/
+
+**/__pycache__/
 
 # 如后续有少量根目录脚本或 C/Shell 工具，可按需保留。
 !/*.sh

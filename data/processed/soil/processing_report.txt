@@ -1,0 +1,43 @@
+HWSD -> APSIM Soil Processing Report
+============================================================
+
+Input raster: F:\APSIM710-r4221\process_bio\hdsw\HWSD2_RASTER\HWSD2.bil
+Input attributes: F:\APSIM710-r4221\process_bio\hdsw\HWSD2_DB\HWSD2.mdb
+Input lon/lat (EPSG:4326): lon=142.917341 lat=-35.980698
+Raster CRS: OGC:CRS84
+Sample point in raster CRS: x=142.917341, y=-35.980698
+Extracted mapping unit ID: 6090
+Crop name: Wheat
+
+Field mapping diagnostics:
+- Used tables: ['layers_df']
+- Field hits: {"sand": ["SAND"], "silt": ["SILT"], "clay": ["CLAY"], "bulk_density": ["BULK"], "organic_carbon": ["ORG_CARBON"], "ph": ["PH_WATER"], "cn_ratio": ["CN_RATIO"], "awc": ["AWC"]}
+- Missing field-layer pairs: [('awc', 'D2'), ('awc', 'D3'), ('awc', 'D4'), ('awc', 'D5'), ('awc', 'D6'), ('awc', 'D7'), ('dul', 'D1'), ('dul', 'D2'), ('dul', 'D3'), ('dul', 'D4'), ('dul', 'D5'), ('dul', 'D6'), ('dul', 'D7'), ('ks', 'D1'), ('ks', 'D2'), ('ks', 'D3'), ('ks', 'D4'), ('ks', 'D5'), ('ks', 'D6'), ('ks', 'D7'), ('ll15', 'D1'), ('ll15', 'D2'), ('ll15', 'D3'), ('ll15', 'D4'), ('ll15', 'D5'), ('ll15', 'D6'), ('ll15', 'D7'), ('sat', 'D1'), ('sat', 'D2'), ('sat', 'D3'), ('sat', 'D4'), ('sat', 'D5'), ('sat', 'D6'), ('sat', 'D7')]
+
+Quality checks summary:
+- texture_sum_check: [{"layer": "D1", "sum_pct": 100.0, "ok": true}, {"layer": "D2", "sum_pct": 100.0, "ok": true}, {"layer": "D3", "sum_pct": 100.0, "ok": true}, {"layer": "D4", "sum_pct": 100.0, "ok": true}, {"layer": "D5", "sum_pct": 100.0, "ok": true}, {"layer": "D6", "sum_pct": 100.0, "ok": true}, {"layer": "D7", "sum_pct": 100.0, "ok": true}]
+- bd_range_check: [{"layer": "D1", "bd": 1.6200000047683716, "ok": true}, {"layer": "D2", "bd": 1.6699999570846558, "ok": true}, {"layer": "D3", "bd": 1.7100000381469727, "ok": true}, {"layer": "D4", "bd": 1.7000000476837158, "ok": true}, {"layer": "D5", "bd": 1.690000057220459, "ok": true}, {"layer": "D6", "bd": 1.7300000190734863, "ok": true}, {"layer": "D7", "bd": 1.7200000286102295, "ok": true}]
+- water_order_check: [{"layer": "D1", "ll15": 0.3180011973776869, "dul": 0.38367924348363336, "sat": 0.38867924348363336, "ok": true}, {"layer": "D2", "ll15": 0.32862664802279673, "dul": 0.36481133694918644, "sat": 0.36981133694918644, "ok": true}, {"layer": "D3", "ll15": 0.3286893822630716, "dul": 0.3497169667369914, "sat": 0.3547169667369914, "ok": true}, {"layer": "D4", "ll15": 0.3287394203521755, "dul": 0.3534905480438808, "sat": 0.3584905480438808, "ok": true}, {"layer": "D5", "ll15": 0.3234141645143176, "dul": 0.3572641293507701, "sat": 0.3622641293507701, "ok": true}, {"layer": "D6", "ll15": 0.31766196876429903, "dul": 0.34216980412321263, "sat": 0.34716980412321263, "ok": true}, {"layer": "D7", "ll15": 0.3009812469015991, "dul": 0.34594338543010206, "sat": 0.35094338543010206, "ok": true}]
+- carbon_check: [{"layer": "D1", "carbon_pct": 0.9199999570846558, "ok": true}, {"layer": "D2", "carbon_pct": 0.6739999651908875, "ok": true}, {"layer": "D3", "carbon_pct": 0.5900000333786011, "ok": true}, {"layer": "D4", "carbon_pct": 0.5230000019073486, "ok": true}, {"layer": "D5", "carbon_pct": 0.45100003480911255, "ok": true}, {"layer": "D6", "carbon_pct": 0.3619999885559082, "ok": true}, {"layer": "D7", "carbon_pct": 0.29600000381469727, "ok": true}]
+- ph_check: [{"layer": "D1", "ph": 7.5, "ok": true}, {"layer": "D2", "ph": 7.699999809265137, "ok": true}, {"layer": "D3", "ph": 7.800000190734863, "ok": true}, {"layer": "D4", "ph": 7.900000095367432, "ok": true}, {"layer": "D5", "ph": 7.900000095367432, "ok": true}, {"layer": "D6", "ph": 8.0, "ok": true}, {"layer": "D7", "ph": 8.0, "ok": true}]
+
+Defaults / estimates used:
+- D1: {"Thickness": "calculated_by_PTF", "AirDry": "calculated_by_PTF", "LL15": "calculated_by_PTF", "DUL": "calculated_by_PTF", "SAT": "calculated_by_PTF", "KS": "calculated_by_PTF", "FOM": "default_value", "FOM.CN": "default_value", "FBiom": "default_value", "FInert": "default_value", "NO3N": "default_value", "NH4N": "default_value", "crop.LL": "calculated_by_PTF", "crop.KL": "default_value", "crop.XF": "default_value"}
+- D2: {"Thickness": "calculated_by_PTF", "AirDry": "calculated_by_PTF", "LL15": "calculated_by_PTF", "DUL": "calculated_by_PTF", "SAT": "calculated_by_PTF", "KS": "calculated_by_PTF", "FOM": "default_value", "FOM.CN": "default_value", "FBiom": "default_value", "FInert": "default_value", "NO3N": "default_value", "NH4N": "default_value", "crop.LL": "calculated_by_PTF", "crop.KL": "default_value", "crop.XF": "default_value"}
+- D3: {"Thickness": "calculated_by_PTF", "AirDry": "calculated_by_PTF", "LL15": "calculated_by_PTF", "DUL": "calculated_by_PTF", "SAT": "calculated_by_PTF", "KS": "calculated_by_PTF", "FOM": "default_value", "FOM.CN": "default_value", "FBiom": "default_value", "FInert": "default_value", "NO3N": "default_value", "NH4N": "default_value", "crop.LL": "calculated_by_PTF", "crop.KL": "default_value", "crop.XF": "default_value"}
+- D4: {"Thickness": "calculated_by_PTF", "AirDry": "calculated_by_PTF", "LL15": "calculated_by_PTF", "DUL": "calculated_by_PTF", "SAT": "calculated_by_PTF", "KS": "calculated_by_PTF", "FOM": "default_value", "FOM.CN": "default_value", "FBiom": "default_value", "FInert": "default_value", "NO3N": "default_value", "NH4N": "default_value", "crop.LL": "calculated_by_PTF", "crop.KL": "default_value", "crop.XF": "default_value"}
+- D5: {"Thickness": "calculated_by_PTF", "AirDry": "calculated_by_PTF", "LL15": "calculated_by_PTF", "DUL": "calculated_by_PTF", "SAT": "calculated_by_PTF", "KS": "calculated_by_PTF", "FOM": "default_value", "FOM.CN": "default_value", "FBiom": "default_value", "FInert": "default_value", "NO3N": "default_value", "NH4N": "default_value", "crop.LL": "calculated_by_PTF", "crop.KL": "default_value", "crop.XF": "default_value"}
+- D6: {"Thickness": "calculated_by_PTF", "AirDry": "calculated_by_PTF", "LL15": "calculated_by_PTF", "DUL": "calculated_by_PTF", "SAT": "calculated_by_PTF", "KS": "calculated_by_PTF", "FOM": "default_value", "FOM.CN": "default_value", "FBiom": "default_value", "FInert": "default_value", "NO3N": "default_value", "NH4N": "default_value", "crop.LL": "calculated_by_PTF", "crop.KL": "default_value", "crop.XF": "default_value"}
+- D7: {"Thickness": "calculated_by_PTF", "AirDry": "calculated_by_PTF", "LL15": "calculated_by_PTF", "DUL": "calculated_by_PTF", "SAT": "calculated_by_PTF", "KS": "calculated_by_PTF", "FOM": "default_value", "FOM.CN": "default_value", "FBiom": "default_value", "FInert": "default_value", "NO3N": "default_value", "NH4N": "default_value", "crop.LL": "calculated_by_PTF", "crop.KL": "default_value", "crop.XF": "default_value"}
+
+Warnings:
+- None
+
+Output files:
+- F:\APSIM710-r4221\process_bio\hdsw\soil_profile.csv
+- F:\APSIM710-r4221\process_bio\hdsw\soil_profile.json
+- F:\APSIM710-r4221\process_bio\hdsw\optional_apsimx_soil_node.json
+- F:\APSIM710-r4221\process_bio\hdsw\processing_report.txt
+
+If field mapping fails, update FIELD_MAP in script or use --field-map-file JSON.
+All default/estimated values are explicitly flagged in CSV/JSON/report.

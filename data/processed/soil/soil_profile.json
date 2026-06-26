@@ -1,0 +1,934 @@
+{
+  "metadata": {
+    "hwsd_raster": "F:\\APSIM710-r4221\\process_bio\\hdsw\\HWSD2_RASTER\\HWSD2.bil",
+    "hwsd_db": "F:\\APSIM710-r4221\\process_bio\\hdsw\\HWSD2_DB\\HWSD2.mdb",
+    "lon": 142.917341,
+    "lat": -35.980698,
+    "sample_x": 142.917341,
+    "sample_y": -35.980698,
+    "raster_crs": "OGC:CRS84",
+    "mapping_unit_id": 6090,
+    "crop_name": "Wheat",
+    "layer_scheme_cm": [
+      [
+        0,
+        20
+      ],
+      [
+        20,
+        40
+      ],
+      [
+        40,
+        60
+      ],
+      [
+        60,
+        80
+      ],
+      [
+        80,
+        100
+      ],
+      [
+        100,
+        150
+      ],
+      [
+        150,
+        200
+      ]
+    ],
+    "outdir": "F:\\APSIM710-r4221\\process_bio\\hdsw"
+  },
+  "diagnostics": {
+    "mapping_unit_id": 6090,
+    "used_tables": [
+      "layers_df"
+    ],
+    "field_hits": {
+      "sand": [
+        "SAND"
+      ],
+      "silt": [
+        "SILT"
+      ],
+      "clay": [
+        "CLAY"
+      ],
+      "bulk_density": [
+        "BULK"
+      ],
+      "organic_carbon": [
+        "ORG_CARBON"
+      ],
+      "ph": [
+        "PH_WATER"
+      ],
+      "cn_ratio": [
+        "CN_RATIO"
+      ],
+      "awc": [
+        "AWC"
+      ]
+    },
+    "missing_fields": [
+      [
+        "awc",
+        "D2"
+      ],
+      [
+        "awc",
+        "D3"
+      ],
+      [
+        "awc",
+        "D4"
+      ],
+      [
+        "awc",
+        "D5"
+      ],
+      [
+        "awc",
+        "D6"
+      ],
+      [
+        "awc",
+        "D7"
+      ],
+      [
+        "dul",
+        "D1"
+      ],
+      [
+        "dul",
+        "D2"
+      ],
+      [
+        "dul",
+        "D3"
+      ],
+      [
+        "dul",
+        "D4"
+      ],
+      [
+        "dul",
+        "D5"
+      ],
+      [
+        "dul",
+        "D6"
+      ],
+      [
+        "dul",
+        "D7"
+      ],
+      [
+        "ks",
+        "D1"
+      ],
+      [
+        "ks",
+        "D2"
+      ],
+      [
+        "ks",
+        "D3"
+      ],
+      [
+        "ks",
+        "D4"
+      ],
+      [
+        "ks",
+        "D5"
+      ],
+      [
+        "ks",
+        "D6"
+      ],
+      [
+        "ks",
+        "D7"
+      ],
+      [
+        "ll15",
+        "D1"
+      ],
+      [
+        "ll15",
+        "D2"
+      ],
+      [
+        "ll15",
+        "D3"
+      ],
+      [
+        "ll15",
+        "D4"
+      ],
+      [
+        "ll15",
+        "D5"
+      ],
+      [
+        "ll15",
+        "D6"
+      ],
+      [
+        "ll15",
+        "D7"
+      ],
+      [
+        "sat",
+        "D1"
+      ],
+      [
+        "sat",
+        "D2"
+      ],
+      [
+        "sat",
+        "D3"
+      ],
+      [
+        "sat",
+        "D4"
+      ],
+      [
+        "sat",
+        "D5"
+      ],
+      [
+        "sat",
+        "D6"
+      ],
+      [
+        "sat",
+        "D7"
+      ]
+    ]
+  },
+  "quality_checks": {
+    "texture_sum_check": [
+      {
+        "layer": "D1",
+        "sum_pct": 100.0,
+        "ok": true
+      },
+      {
+        "layer": "D2",
+        "sum_pct": 100.0,
+        "ok": true
+      },
+      {
+        "layer": "D3",
+        "sum_pct": 100.0,
+        "ok": true
+      },
+      {
+        "layer": "D4",
+        "sum_pct": 100.0,
+        "ok": true
+      },
+      {
+        "layer": "D5",
+        "sum_pct": 100.0,
+        "ok": true
+      },
+      {
+        "layer": "D6",
+        "sum_pct": 100.0,
+        "ok": true
+      },
+      {
+        "layer": "D7",
+        "sum_pct": 100.0,
+        "ok": true
+      }
+    ],
+    "bd_range_check": [
+      {
+        "layer": "D1",
+        "bd": 1.6200000047683716,
+        "ok": true
+      },
+      {
+        "layer": "D2",
+        "bd": 1.6699999570846558,
+        "ok": true
+      },
+      {
+        "layer": "D3",
+        "bd": 1.7100000381469727,
+        "ok": true
+      },
+      {
+        "layer": "D4",
+        "bd": 1.7000000476837158,
+        "ok": true
+      },
+      {
+        "layer": "D5",
+        "bd": 1.690000057220459,
+        "ok": true
+      },
+      {
+        "layer": "D6",
+        "bd": 1.7300000190734863,
+        "ok": true
+      },
+      {
+        "layer": "D7",
+        "bd": 1.7200000286102295,
+        "ok": true
+      }
+    ],
+    "water_order_check": [
+      {
+        "layer": "D1",
+        "ll15": 0.3180011973776869,
+        "dul": 0.38367924348363336,
+        "sat": 0.38867924348363336,
+        "ok": true
+      },
+      {
+        "layer": "D2",
+        "ll15": 0.32862664802279673,
+        "dul": 0.36481133694918644,
+        "sat": 0.36981133694918644,
+        "ok": true
+      },
+      {
+        "layer": "D3",
+        "ll15": 0.3286893822630716,
+        "dul": 0.3497169667369914,
+        "sat": 0.3547169667369914,
+        "ok": true
+      },
+      {
+        "layer": "D4",
+        "ll15": 0.3287394203521755,
+        "dul": 0.3534905480438808,
+        "sat": 0.3584905480438808,
+        "ok": true
+      },
+      {
+        "layer": "D5",
+        "ll15": 0.3234141645143176,
+        "dul": 0.3572641293507701,
+        "sat": 0.3622641293507701,
+        "ok": true
+      },
+      {
+        "layer": "D6",
+        "ll15": 0.31766196876429903,
+        "dul": 0.34216980412321263,
+        "sat": 0.34716980412321263,
+        "ok": true
+      },
+      {
+        "layer": "D7",
+        "ll15": 0.3009812469015991,
+        "dul": 0.34594338543010206,
+        "sat": 0.35094338543010206,
+        "ok": true
+      }
+    ],
+    "carbon_check": [
+      {
+        "layer": "D1",
+        "carbon_pct": 0.9199999570846558,
+        "ok": true
+      },
+      {
+        "layer": "D2",
+        "carbon_pct": 0.6739999651908875,
+        "ok": true
+      },
+      {
+        "layer": "D3",
+        "carbon_pct": 0.5900000333786011,
+        "ok": true
+      },
+      {
+        "layer": "D4",
+        "carbon_pct": 0.5230000019073486,
+        "ok": true
+      },
+      {
+        "layer": "D5",
+        "carbon_pct": 0.45100003480911255,
+        "ok": true
+      },
+      {
+        "layer": "D6",
+        "carbon_pct": 0.3619999885559082,
+        "ok": true
+      },
+      {
+        "layer": "D7",
+        "carbon_pct": 0.29600000381469727,
+        "ok": true
+      }
+    ],
+    "ph_check": [
+      {
+        "layer": "D1",
+        "ph": 7.5,
+        "ok": true
+      },
+      {
+        "layer": "D2",
+        "ph": 7.699999809265137,
+        "ok": true
+      },
+      {
+        "layer": "D3",
+        "ph": 7.800000190734863,
+        "ok": true
+      },
+      {
+        "layer": "D4",
+        "ph": 7.900000095367432,
+        "ok": true
+      },
+      {
+        "layer": "D5",
+        "ph": 7.900000095367432,
+        "ok": true
+      },
+      {
+        "layer": "D6",
+        "ph": 8.0,
+        "ok": true
+      },
+      {
+        "layer": "D7",
+        "ph": 8.0,
+        "ok": true
+      }
+    ],
+    "default_or_estimated_fields": [
+      {
+        "layer": "D1",
+        "fields": {
+          "Thickness": "calculated_by_PTF",
+          "AirDry": "calculated_by_PTF",
+          "LL15": "calculated_by_PTF",
+          "DUL": "calculated_by_PTF",
+          "SAT": "calculated_by_PTF",
+          "KS": "calculated_by_PTF",
+          "FOM": "default_value",
+          "FOM.CN": "default_value",
+          "FBiom": "default_value",
+          "FInert": "default_value",
+          "NO3N": "default_value",
+          "NH4N": "default_value",
+          "crop.LL": "calculated_by_PTF",
+          "crop.KL": "default_value",
+          "crop.XF": "default_value"
+        }
+      },
+      {
+        "layer": "D2",
+        "fields": {
+          "Thickness": "calculated_by_PTF",
+          "AirDry": "calculated_by_PTF",
+          "LL15": "calculated_by_PTF",
+          "DUL": "calculated_by_PTF",
+          "SAT": "calculated_by_PTF",
+          "KS": "calculated_by_PTF",
+          "FOM": "default_value",
+          "FOM.CN": "default_value",
+          "FBiom": "default_value",
+          "FInert": "default_value",
+          "NO3N": "default_value",
+          "NH4N": "default_value",
+          "crop.LL": "calculated_by_PTF",
+          "crop.KL": "default_value",
+          "crop.XF": "default_value"
+        }
+      },
+      {
+        "layer": "D3",
+        "fields": {
+          "Thickness": "calculated_by_PTF",
+          "AirDry": "calculated_by_PTF",
+          "LL15": "calculated_by_PTF",
+          "DUL": "calculated_by_PTF",
+          "SAT": "calculated_by_PTF",
+          "KS": "calculated_by_PTF",
+          "FOM": "default_value",
+          "FOM.CN": "default_value",
+          "FBiom": "default_value",
+          "FInert": "default_value",
+          "NO3N": "default_value",
+          "NH4N": "default_value",
+          "crop.LL": "calculated_by_PTF",
+          "crop.KL": "default_value",
+          "crop.XF": "default_value"
+        }
+      },
+      {
+        "layer": "D4",
+        "fields": {
+          "Thickness": "calculated_by_PTF",
+          "AirDry": "calculated_by_PTF",
+          "LL15": "calculated_by_PTF",
+          "DUL": "calculated_by_PTF",
+          "SAT": "calculated_by_PTF",
+          "KS": "calculated_by_PTF",
+          "FOM": "default_value",
+          "FOM.CN": "default_value",
+          "FBiom": "default_value",
+          "FInert": "default_value",
+          "NO3N": "default_value",
+          "NH4N": "default_value",
+          "crop.LL": "calculated_by_PTF",
+          "crop.KL": "default_value",
+          "crop.XF": "default_value"
+        }
+      },
+      {
+        "layer": "D5",
+        "fields": {
+          "Thickness": "calculated_by_PTF",
+          "AirDry": "calculated_by_PTF",
+          "LL15": "calculated_by_PTF",
+          "DUL": "calculated_by_PTF",
+          "SAT": "calculated_by_PTF",
+          "KS": "calculated_by_PTF",
+          "FOM": "default_value",
+          "FOM.CN": "default_value",
+          "FBiom": "default_value",
+          "FInert": "default_value",
+          "NO3N": "default_value",
+          "NH4N": "default_value",
+          "crop.LL": "calculated_by_PTF",
+          "crop.KL": "default_value",
+          "crop.XF": "default_value"
+        }
+      },
+      {
+        "layer": "D6",
+        "fields": {
+          "Thickness": "calculated_by_PTF",
+          "AirDry": "calculated_by_PTF",
+          "LL15": "calculated_by_PTF",
+          "DUL": "calculated_by_PTF",
+          "SAT": "calculated_by_PTF",
+          "KS": "calculated_by_PTF",
+          "FOM": "default_value",
+          "FOM.CN": "default_value",
+          "FBiom": "default_value",
+          "FInert": "default_value",
+          "NO3N": "default_value",
+          "NH4N": "default_value",
+          "crop.LL": "calculated_by_PTF",
+          "crop.KL": "default_value",
+          "crop.XF": "default_value"
+        }
+      },
+      {
+        "layer": "D7",
+        "fields": {
+          "Thickness": "calculated_by_PTF",
+          "AirDry": "calculated_by_PTF",
+          "LL15": "calculated_by_PTF",
+          "DUL": "calculated_by_PTF",
+          "SAT": "calculated_by_PTF",
+          "KS": "calculated_by_PTF",
+          "FOM": "default_value",
+          "FOM.CN": "default_value",
+          "FBiom": "default_value",
+          "FInert": "default_value",
+          "NO3N": "default_value",
+          "NH4N": "default_value",
+          "crop.LL": "calculated_by_PTF",
+          "crop.KL": "default_value",
+          "crop.XF": "default_value"
+        }
+      }
+    ],
+    "warnings": []
+  },
+  "profile": {
+    "crop_name": "Wheat",
+    "layers": [
+      {
+        "Layer": "D1",
+        "Depth": "0-20",
+        "Thickness": 200.0,
+        "BD": 1.6200000047683716,
+        "AirDry": 0.15900059868884345,
+        "LL15": 0.3180011973776869,
+        "DUL": 0.38367924348363336,
+        "SAT": 0.38867924348363336,
+        "KS": 21.542738426668613,
+        "Carbon": 0.9199999570846558,
+        "SoilCNRatio": 11.0,
+        "FOM": 350.0,
+        "FOM.CN": 40.0,
+        "FBiom": 0.04,
+        "FInert": 0.4,
+        "NO3N": 5.0,
+        "NH4N": 1.0,
+        "PH": 7.5,
+        "ParticleSizeClay": 54.0,
+        "ParticleSizeSilt": 26.0,
+        "ParticleSizeSand": 20.0,
+        "crop.LL": 0.3180011973776869,
+        "crop.KL": 0.06,
+        "crop.XF": 1.0,
+        "quality_flag": [
+          "default_needs_calibration"
+        ],
+        "source_flags": {
+          "Thickness": "calculated_by_PTF",
+          "BD": "measured_from_HWSD",
+          "AirDry": "calculated_by_PTF",
+          "LL15": "calculated_by_PTF",
+          "DUL": "calculated_by_PTF",
+          "SAT": "calculated_by_PTF",
+          "KS": "calculated_by_PTF",
+          "Carbon": "measured_from_HWSD",
+          "SoilCNRatio": "measured_from_HWSD",
+          "FOM": "default_value",
+          "FOM.CN": "default_value",
+          "FBiom": "default_value",
+          "FInert": "default_value",
+          "NO3N": "default_value",
+          "NH4N": "default_value",
+          "PH": "measured_from_HWSD",
+          "ParticleSizeClay": "measured_from_HWSD",
+          "ParticleSizeSilt": "measured_from_HWSD",
+          "ParticleSizeSand": "measured_from_HWSD",
+          "crop.LL": "calculated_by_PTF",
+          "crop.KL": "default_value",
+          "crop.XF": "default_value"
+        }
+      },
+      {
+        "Layer": "D2",
+        "Depth": "20-40",
+        "Thickness": 200.0,
+        "BD": 1.6699999570846558,
+        "AirDry": 0.16431332401139837,
+        "LL15": 0.32862664802279673,
+        "DUL": 0.36481133694918644,
+        "SAT": 0.36981133694918644,
+        "KS": 19.564675249985033,
+        "Carbon": 0.6739999651908875,
+        "SoilCNRatio": 10.0,
+        "FOM": 270.0,
+        "FOM.CN": 40.0,
+        "FBiom": 0.02,
+        "FInert": 0.6,
+        "NO3N": 3.0,
+        "NH4N": 0.8,
+        "PH": 7.699999809265137,
+        "ParticleSizeClay": 56.0,
+        "ParticleSizeSilt": 26.0,
+        "ParticleSizeSand": 18.0,
+        "crop.LL": 0.32862664802279673,
+        "crop.KL": 0.05,
+        "crop.XF": 1.0,
+        "quality_flag": [
+          "default_needs_calibration"
+        ],
+        "source_flags": {
+          "Thickness": "calculated_by_PTF",
+          "BD": "measured_from_HWSD",
+          "AirDry": "calculated_by_PTF",
+          "LL15": "calculated_by_PTF",
+          "DUL": "calculated_by_PTF",
+          "SAT": "calculated_by_PTF",
+          "KS": "calculated_by_PTF",
+          "Carbon": "measured_from_HWSD",
+          "SoilCNRatio": "measured_from_HWSD",
+          "FOM": "default_value",
+          "FOM.CN": "default_value",
+          "FBiom": "default_value",
+          "FInert": "default_value",
+          "NO3N": "default_value",
+          "NH4N": "default_value",
+          "PH": "measured_from_HWSD",
+          "ParticleSizeClay": "measured_from_HWSD",
+          "ParticleSizeSilt": "measured_from_HWSD",
+          "ParticleSizeSand": "measured_from_HWSD",
+          "crop.LL": "calculated_by_PTF",
+          "crop.KL": "default_value",
+          "crop.XF": "default_value"
+        }
+      },
+      {
+        "Layer": "D3",
+        "Depth": "40-60",
+        "Thickness": 200.0,
+        "BD": 1.7100000381469727,
+        "AirDry": 0.1643446911315358,
+        "LL15": 0.3286893822630716,
+        "DUL": 0.3497169667369914,
+        "SAT": 0.3547169667369914,
+        "KS": 18.886431958132327,
+        "Carbon": 0.5900000333786011,
+        "SoilCNRatio": 10.0,
+        "FOM": 165.0,
+        "FOM.CN": 40.0,
+        "FBiom": 0.02,
+        "FInert": 0.8,
+        "NO3N": 2.0,
+        "NH4N": 0.6,
+        "PH": 7.800000190734863,
+        "ParticleSizeClay": 56.0,
+        "ParticleSizeSilt": 26.0,
+        "ParticleSizeSand": 18.0,
+        "crop.LL": 0.3286893822630716,
+        "crop.KL": 0.04,
+        "crop.XF": 1.0,
+        "quality_flag": [
+          "default_needs_calibration"
+        ],
+        "source_flags": {
+          "Thickness": "calculated_by_PTF",
+          "BD": "measured_from_HWSD",
+          "AirDry": "calculated_by_PTF",
+          "LL15": "calculated_by_PTF",
+          "DUL": "calculated_by_PTF",
+          "SAT": "calculated_by_PTF",
+          "KS": "calculated_by_PTF",
+          "Carbon": "measured_from_HWSD",
+          "SoilCNRatio": "measured_from_HWSD",
+          "FOM": "default_value",
+          "FOM.CN": "default_value",
+          "FBiom": "default_value",
+          "FInert": "default_value",
+          "NO3N": "default_value",
+          "NH4N": "default_value",
+          "PH": "measured_from_HWSD",
+          "ParticleSizeClay": "measured_from_HWSD",
+          "ParticleSizeSilt": "measured_from_HWSD",
+          "ParticleSizeSand": "measured_from_HWSD",
+          "crop.LL": "calculated_by_PTF",
+          "crop.KL": "default_value",
+          "crop.XF": "default_value"
+        }
+      },
+      {
+        "Layer": "D4",
+        "Depth": "60-80",
+        "Thickness": 200.0,
+        "BD": 1.7000000476837158,
+        "AirDry": 0.16436971017608776,
+        "LL15": 0.3287394203521755,
+        "DUL": 0.3534905480438808,
+        "SAT": 0.3584905480438808,
+        "KS": 18.356453392626797,
+        "Carbon": 0.5230000019073486,
+        "SoilCNRatio": 9.0,
+        "FOM": 100.0,
+        "FOM.CN": 40.0,
+        "FBiom": 0.02,
+        "FInert": 1.0,
+        "NO3N": 1.5,
+        "NH4N": 0.5,
+        "PH": 7.900000095367432,
+        "ParticleSizeClay": 56.0,
+        "ParticleSizeSilt": 26.0,
+        "ParticleSizeSand": 18.0,
+        "crop.LL": 0.3287394203521755,
+        "crop.KL": 0.03,
+        "crop.XF": 1.0,
+        "quality_flag": [
+          "default_needs_calibration"
+        ],
+        "source_flags": {
+          "Thickness": "calculated_by_PTF",
+          "BD": "measured_from_HWSD",
+          "AirDry": "calculated_by_PTF",
+          "LL15": "calculated_by_PTF",
+          "DUL": "calculated_by_PTF",
+          "SAT": "calculated_by_PTF",
+          "KS": "calculated_by_PTF",
+          "Carbon": "measured_from_HWSD",
+          "SoilCNRatio": "measured_from_HWSD",
+          "FOM": "default_value",
+          "FOM.CN": "default_value",
+          "FBiom": "default_value",
+          "FInert": "default_value",
+          "NO3N": "default_value",
+          "NH4N": "default_value",
+          "PH": "measured_from_HWSD",
+          "ParticleSizeClay": "measured_from_HWSD",
+          "ParticleSizeSilt": "measured_from_HWSD",
+          "ParticleSizeSand": "measured_from_HWSD",
+          "crop.LL": "calculated_by_PTF",
+          "crop.KL": "default_value",
+          "crop.XF": "default_value"
+        }
+      },
+      {
+        "Layer": "D5",
+        "Depth": "80-100",
+        "Thickness": 200.0,
+        "BD": 1.690000057220459,
+        "AirDry": 0.1617070822571588,
+        "LL15": 0.3234141645143176,
+        "DUL": 0.3572641293507701,
+        "SAT": 0.3622641293507701,
+        "KS": 17.580898635002796,
+        "Carbon": 0.45100003480911255,
+        "SoilCNRatio": 9.0,
+        "FOM": 60.0,
+        "FOM.CN": 40.0,
+        "FBiom": 0.01,
+        "FInert": 1.0,
+        "NO3N": 1.0,
+        "NH4N": 0.4,
+        "PH": 7.900000095367432,
+        "ParticleSizeClay": 55.0,
+        "ParticleSizeSilt": 26.0,
+        "ParticleSizeSand": 19.0,
+        "crop.LL": 0.3234141645143176,
+        "crop.KL": 0.025,
+        "crop.XF": 1.0,
+        "quality_flag": [
+          "default_needs_calibration"
+        ],
+        "source_flags": {
+          "Thickness": "calculated_by_PTF",
+          "BD": "measured_from_HWSD",
+          "AirDry": "calculated_by_PTF",
+          "LL15": "calculated_by_PTF",
+          "DUL": "calculated_by_PTF",
+          "SAT": "calculated_by_PTF",
+          "KS": "calculated_by_PTF",
+          "Carbon": "measured_from_HWSD",
+          "SoilCNRatio": "measured_from_HWSD",
+          "FOM": "default_value",
+          "FOM.CN": "default_value",
+          "FBiom": "default_value",
+          "FInert": "default_value",
+          "NO3N": "default_value",
+          "NH4N": "default_value",
+          "PH": "measured_from_HWSD",
+          "ParticleSizeClay": "measured_from_HWSD",
+          "ParticleSizeSilt": "measured_from_HWSD",
+          "ParticleSizeSand": "measured_from_HWSD",
+          "crop.LL": "calculated_by_PTF",
+          "crop.KL": "default_value",
+          "crop.XF": "default_value"
+        }
+      },
+      {
+        "Layer": "D6",
+        "Depth": "100-150",
+        "Thickness": 500.0,
+        "BD": 1.7300000190734863,
+        "AirDry": 0.15883098438214951,
+        "LL15": 0.31766196876429903,
+        "DUL": 0.34216980412321263,
+        "SAT": 0.34716980412321263,
+        "KS": 19.581333560692958,
+        "Carbon": 0.3619999885559082,
+        "SoilCNRatio": 7.0,
+        "FOM": 37.0,
+        "FOM.CN": 40.0,
+        "FBiom": 0.01,
+        "FInert": 1.0,
+        "NO3N": 0.8,
+        "NH4N": 0.3,
+        "PH": 8.0,
+        "ParticleSizeClay": 54.0,
+        "ParticleSizeSilt": 28.0,
+        "ParticleSizeSand": 18.0,
+        "crop.LL": 0.31766196876429903,
+        "crop.KL": 0.015,
+        "crop.XF": 1.0,
+        "quality_flag": [
+          "default_needs_calibration"
+        ],
+        "source_flags": {
+          "Thickness": "calculated_by_PTF",
+          "BD": "measured_from_HWSD",
+          "AirDry": "calculated_by_PTF",
+          "LL15": "calculated_by_PTF",
+          "DUL": "calculated_by_PTF",
+          "SAT": "calculated_by_PTF",
+          "KS": "calculated_by_PTF",
+          "Carbon": "measured_from_HWSD",
+          "SoilCNRatio": "measured_from_HWSD",
+          "FOM": "default_value",
+          "FOM.CN": "default_value",
+          "FBiom": "default_value",
+          "FInert": "default_value",
+          "NO3N": "default_value",
+          "NH4N": "default_value",
+          "PH": "measured_from_HWSD",
+          "ParticleSizeClay": "measured_from_HWSD",
+          "ParticleSizeSilt": "measured_from_HWSD",
+          "ParticleSizeSand": "measured_from_HWSD",
+          "crop.LL": "calculated_by_PTF",
+          "crop.KL": "default_value",
+          "crop.XF": "default_value"
+        }
+      },
+      {
+        "Layer": "D7",
+        "Depth": "150-200",
+        "Thickness": 500.0,
+        "BD": 1.7200000286102295,
+        "AirDry": 0.15049062345079955,
+        "LL15": 0.3009812469015991,
+        "DUL": 0.34594338543010206,
+        "SAT": 0.35094338543010206,
+        "KS": 21.585808069708314,
+        "Carbon": 0.29600000381469727,
+        "SoilCNRatio": 7.0,
+        "FOM": 22.0,
+        "FOM.CN": 40.0,
+        "FBiom": 0.01,
+        "FInert": 1.0,
+        "NO3N": 0.5,
+        "NH4N": 0.2,
+        "PH": 8.0,
+        "ParticleSizeClay": 51.0,
+        "ParticleSizeSilt": 30.0,
+        "ParticleSizeSand": 19.0,
+        "crop.LL": 0.3009812469015991,
+        "crop.KL": 0.01,
+        "crop.XF": 1.0,
+        "quality_flag": [
+          "default_needs_calibration"
+        ],
+        "source_flags": {
+          "Thickness": "calculated_by_PTF",
+          "BD": "measured_from_HWSD",
+          "AirDry": "calculated_by_PTF",
+          "LL15": "calculated_by_PTF",
+          "DUL": "calculated_by_PTF",
+          "SAT": "calculated_by_PTF",
+          "KS": "calculated_by_PTF",
+          "Carbon": "measured_from_HWSD",
+          "SoilCNRatio": "measured_from_HWSD",
+          "FOM": "default_value",
+          "FOM.CN": "default_value",
+          "FBiom": "default_value",
+          "FInert": "default_value",
+          "NO3N": "default_value",
+          "NH4N": "default_value",
+          "PH": "measured_from_HWSD",
+          "ParticleSizeClay": "measured_from_HWSD",
+          "ParticleSizeSilt": "measured_from_HWSD",
+          "ParticleSizeSand": "measured_from_HWSD",
+          "crop.LL": "calculated_by_PTF",
+          "crop.KL": "default_value",
+          "crop.XF": "default_value"
+        }
+      }
+    ]
+  }
+}
