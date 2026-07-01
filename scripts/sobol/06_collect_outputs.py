@@ -37,11 +37,15 @@ VARIABLE_MAP = {
         "grain_yield": ["paddock.wheat.yield", "WheatYield", "wheat.Yield", "yield"],
         "biomass": ["paddock.wheat.biomass", "WheatBio", "wheat.Biomass", "biomass"],
         "lai": ["wheatlai", "wheat.lai", "paddock.wheat.lai", "lai"],
+        "flowering_das": ["WheatFloweringDAS", "wheat.FloweringDAS", "FloweringDAS"],
+        "maturity_das": ["WheatMaturityDAS", "WheatDaysToMaturity", "wheat.maturity_das", "wheat.DaysToMaturity", "maturity_das", "DaysToMaturity"],
         "grain_number": [
             "wheat.grain_no",
+            "wheat.GrainNo",
             "wheat.grain_number",
             "wheat.grain_number_total",
             "WheatGrainNo",
+            "WheatGrain_no",
             "WheatGrainNumber",
             "grain_number",
             "grain number",
@@ -51,6 +55,7 @@ VARIABLE_MAP = {
         ],
         "grain_weight": [
             "wheat.grain_size",
+            "wheat.GrainSize",
             "WheatGrainSize",
             "wheat.grain_weight",
             "grain_weight",
@@ -111,16 +116,22 @@ VARIABLE_MAP = {
         "grain_yield": ["paddock.maize.yield", "MaizeYield", "maize.Yield", "yield"],
         "biomass": ["paddock.maize.biomass", "MaizeBio", "maize.Biomass", "biomass"],
         "lai": ["maizelai", "maize.lai", "paddock.maize.lai", "lai"],
+        "flowering_das": ["MaizeFloweringDAS", "maize.FloweringDAS", "FloweringDAS"],
+        "maturity_das": ["MaizeMaturityDAS", "MaizeDaysToMaturity", "maize.maturity_das", "maize.DaysToMaturity", "maturity_das", "DaysToMaturity"],
         "grain_number": [
+            "MaizeGrainNo",
             "MaizeGrainNoCapital",
             "maize.GrainNo",
             "MaizeGrainNumberCapital",
+            "GrainNo",
         ],
         "grain_weight": [
+            "MaizeGrainSize",
             "MaizeGrainSizeCapital",
             "maize.GrainSize",
             "MaizeGrainGreenWtCapital",
             "maize.GrainGreenWt",
+            "GrainSize",
         ],
         "water_use_efficiency": ["maize.WUE", "MaizeWUE", "water_use_efficiency", "WUE", "water use efficiency"],
         "evapotranspiration": [
@@ -293,6 +304,29 @@ def find_first_column_filtered(columns, candidates, exclude_substrings=None) -> 
     return None
 
 
+def candidate_columns_filtered(columns, candidates, exclude_substrings=None) -> list[str]:
+    exclude_substrings = [s.lower() for s in (exclude_substrings or [])]
+
+    def allowed(col: str) -> bool:
+        col_l = str(col).lower()
+        return not any(bad in col_l for bad in exclude_substrings)
+
+    lower_map = {str(c).lower(): c for c in columns if allowed(str(c))}
+    matches = []
+    for cand in candidates:
+        match = lower_map.get(str(cand).lower())
+        if match is not None:
+            matches.append(match)
+    for cand in candidates:
+        cand_l = str(cand).lower()
+        if len(cand_l) <= 3 or cand_l in {"et", "es", "eo", "transpiration", "evapotranspiration"}:
+            continue
+        for col in columns:
+            if allowed(str(col)) and cand_l in str(col).lower():
+                matches.append(col)
+    return list(dict.fromkeys(matches))
+
+
 def max_numeric_with_source(df: pd.DataFrame, candidates, exclude_substrings=None) -> tuple[float | None, str]:
     col = find_first_column_filtered(df.columns, candidates, exclude_substrings)
     if col is None:
@@ -392,6 +426,28 @@ def aggregate_numeric_with_source(df: pd.DataFrame, candidates, method: str = "m
     return float(vals.max()), col
 
 
+def aggregate_numeric_with_source(df: pd.DataFrame, candidates, method: str = "max", exclude_substrings=None, crop: str = "") -> tuple[float | None, str]:
+    for col in candidate_columns_filtered(df.columns, candidates, exclude_substrings):
+        work_df = filter_to_crop_state(df, crop) if method == "sum_by_date" and crop else df
+        vals = pd.to_numeric(work_df[col], errors="coerce")
+        if vals.dropna().empty:
+            continue
+        if method == "sum_by_date":
+            date_col = find_first_column(work_df.columns, ["Date"])
+            if date_col is not None:
+                temp = pd.DataFrame(
+                    {
+                        "date": pd.to_datetime(work_df[date_col], errors="coerce"),
+                        "value": vals,
+                    }
+                ).dropna(subset=["value"])
+                if not temp.empty and temp["date"].notna().any():
+                    return float(temp.groupby("date", dropna=False)["value"].max().sum()), col
+            return float(vals.sum()), col
+        return float(vals.max()), col
+    return None, ""
+
+
 def aggregate_layer_columns_with_source(df: pd.DataFrame, prefixes, crop: str = "") -> tuple[float | None, str]:
     """把逐层日通量列先逐日求层和，再跨日期累加。
 
@@ -419,6 +475,58 @@ def aggregate_layer_columns_with_source(df: pd.DataFrame, prefixes, crop: str = 
             daily_layers = temp.groupby("_date", dropna=False)[layer_cols].max()
             return float(daily_layers.sum(axis=1, skipna=True).sum()), ";".join(layer_cols)
     return float(numeric.sum(axis=1, skipna=True).sum()), ";".join(layer_cols)
+
+
+def crop_start_date(df: pd.DataFrame, crop: str):
+    date_col = find_first_column(df.columns, ["Date"])
+    if date_col is None:
+        return None
+    active = filter_to_crop_state(df, crop)
+    dates = pd.to_datetime(active[date_col], errors="coerce")
+    if dates.dropna().empty:
+        dates = pd.to_datetime(df[date_col], errors="coerce")
+    if dates.dropna().empty:
+        return None
+    return dates.dropna().min()
+
+
+def date_from_das(df: pd.DataFrame, crop: str, candidates) -> str | None:
+    col = find_first_column_filtered(df.columns, candidates)
+    if col is None:
+        return None
+    vals = pd.to_numeric(df[col], errors="coerce")
+    if vals.dropna().empty:
+        return None
+    start = crop_start_date(df, crop)
+    if start is None:
+        return None
+    das = float(vals.dropna().max())
+    return (pd.Timestamp(start).normalize() + pd.to_timedelta(das, unit="D")).strftime("%Y-%m-%d")
+
+
+def compute_wue(numerator, transpiration, soil_evaporation) -> float | None:
+    if is_missing(numerator) or is_missing(transpiration) or is_missing(soil_evaporation):
+        return None
+    et = float(transpiration) + float(soil_evaporation)
+    if et == 0:
+        return None
+    return float(numerator) / et
+
+
+def derive_thousand_grain_weight(grain_yield, grain_number) -> float | None:
+    if is_missing(grain_yield) or is_missing(grain_number):
+        return None
+    grain_number = float(grain_number)
+    if grain_number == 0:
+        return None
+    return float(grain_yield) * 100.0 / grain_number
+
+
+def water_uptake_prefixes_for_crop(crop: str) -> list[str]:
+    return {
+        "wheat": ["WheatWaterUptake"],
+        "maize": ["MaizeWaterUptake"],
+    }.get(crop.lower(), [])
 
 
 def update_value(out: dict, source_cols: dict, mapping_rows: list, df: pd.DataFrame, var: str, candidates, sid, crop, cultivar):
@@ -527,10 +635,11 @@ def main() -> None:
                 for var in EXTRACT_VARIABLES:
                     update_value(out, source_cols, mapping_rows, df, var, maps.get(var, []), sid, crop, cultivar)
 
-                if crop == "wheat":
+                uptake_prefixes = water_uptake_prefixes_for_crop(crop)
+                if uptake_prefixes:
                     uptake_val, uptake_cols = aggregate_layer_columns_with_source(
                         df,
-                        ["WheatWaterUptake"],
+                        uptake_prefixes,
                         crop,
                     )
                     if uptake_val is not None:
@@ -548,6 +657,11 @@ def main() -> None:
                                 "source_output_file": df["_source_output_file"].iloc[0],
                             }
                         )
+
+                if out["flowering_date"] is None:
+                    out["flowering_date"] = date_from_das(df, crop, maps.get("flowering_das", []))
+                if out["maturity_date"] is None:
+                    out["maturity_date"] = date_from_das(df, crop, maps.get("maturity_das", []))
 
                 if out["flowering_date"] is None:
                     out["flowering_date"] = first_stage_date(df, crop, ["flower", "anthesis"])
@@ -575,12 +689,18 @@ def main() -> None:
                     source_cols["soil_evaporation_source_column"],
                 )
 
-            if not is_missing(out["evapotranspiration"]) and float(out["evapotranspiration"]) != 0:
-                et = float(out["evapotranspiration"])
-                if not is_missing(out["grain_yield"]):
-                    out["water_use_efficiency_yield"] = float(out["grain_yield"]) / et
-                if not is_missing(out["biomass"]):
-                    out["water_use_efficiency_biomass"] = float(out["biomass"]) / et
+            if is_missing(out["grain_weight"]):
+                out["grain_weight"] = derive_thousand_grain_weight(out["grain_yield"], out["grain_number"])
+                if out["grain_weight"] is not None:
+                    source_cols["grain_weight_source_column"] = append_unique(
+                        source_cols["grain_weight_source_column"],
+                        "derived_from_grain_yield_and_grain_number",
+                    )
+
+            if is_missing(out["water_use_efficiency_yield"]):
+                out["water_use_efficiency_yield"] = compute_wue(out["grain_yield"], out["transpiration"], out["soil_evaporation"])
+            if is_missing(out["water_use_efficiency_biomass"]):
+                out["water_use_efficiency_biomass"] = compute_wue(out["biomass"], out["transpiration"], out["soil_evaporation"])
 
             out["source_output_file"] = ";".join(sorted(set(source_files)))
             out.update(source_cols)

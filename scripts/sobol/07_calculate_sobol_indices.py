@@ -13,6 +13,7 @@ import os
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_object_dtype, is_string_dtype
 from SALib.analyze import sobol
 
 from sobol_common import (
@@ -52,7 +53,7 @@ MISSING_REPORT_CSV = MISSING_VALUES_REPORT_CSV
 
 
 def target_to_numeric(series: pd.Series) -> pd.Series:
-    if series.dtype == object:
+    if is_object_dtype(series.dtype) or is_string_dtype(series.dtype):
         dt = pd.to_datetime(series, errors="coerce")
         if dt.notna().sum() >= series.notna().sum() * 0.5 and dt.notna().sum() > 0:
             return (dt - pd.Timestamp("1970-01-01")).dt.days.astype(float)

@@ -375,7 +375,9 @@ def read_apsim_out(path: Path) -> pd.DataFrame:
         if col.lower() == "date":
             df[col] = pd.to_datetime(df[col], dayfirst=True, errors="coerce")
         else:
-            df[col] = pd.to_numeric(df[col], errors="ignore")
+            converted = pd.to_numeric(df[col], errors="coerce")
+            if converted.notna().sum() > 0:
+                df[col] = converted
     return df
 
 

@@ -221,7 +221,8 @@ def main() -> None:
                 elapsed = time.time() - start
                 status = "finished" if proc.returncode == 0 else f"failed_returncode_{proc.returncode}"
                 archived = archive_outputs(output_pairs, logger, tag)
-                if proc.returncode == 0 and not archived:
+                archived_reports = [p for p in archived if Path(p).suffix.lower() != ".sum"]
+                if proc.returncode == 0 and not archived_reports:
                     status = "failed_no_outputs"
                 statuses.append((sid, status))
                 logger.info("%s: %s, 用时 %.1f s, 日志 %s", tag, status, elapsed, log_file)
