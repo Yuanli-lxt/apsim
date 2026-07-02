@@ -15,13 +15,19 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from lxml import etree
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 APSIM_ROOT = PROJECT_ROOT.parent
 PROCESSING_DIR = APSIM_ROOT / "processing"
 if str(PROCESSING_DIR) not in sys.path:
     sys.path.insert(0, str(PROCESSING_DIR))
+SYSTEM_SENSITIVITY_SCRIPT_DIR = PROJECT_ROOT / "scripts" / "system_sensitivity"
+if str(SYSTEM_SENSITIVITY_SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SYSTEM_SENSITIVITY_SCRIPT_DIR))
 
 import run_joint_single_factor_rounds as base
+from system_common import build_system_parameter_rows
 
 
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "output_sobol"
@@ -30,6 +36,15 @@ DEFAULT_HDSW_SOIL_SOURCE = PROJECT_ROOT / "output_hdsw" / "output" / "best" / "t
 DEFAULT_HDSW_SEED_DIR = PROJECT_ROOT / "output_sobol" / "best"
 DEFAULT_WHEAT_CULTIVAR = "Jimai70_v132_joint_iter353"
 DEFAULT_MAIZE_CULTIVAR = "P01_shandong_2025_v527_joint_iter3"
+DEFAULT_CULTIVAR_SOBOL_PRIORITY_CSV = (
+    PROJECT_ROOT
+    / "outputs"
+    / "sobol"
+    / "organized_outputs_screened_N128_20260515_185604"
+    / "final_results"
+    / "sobol_top5_by_target.csv"
+)
+DEFAULT_SYSTEM_SOBOL_PRIORITY_CSV = PROJECT_ROOT / "outputs" / "system_sensitivity" / "final_results" / "sobol_indices_summary.csv"
 
 PROCESS_BIO = DEFAULT_OUTPUT_DIR
 INDEX_PATH = PROCESS_BIO / "iteration_index.csv"
@@ -38,12 +53,23 @@ WHEAT_LATE_STAGE_CN_DEFAULT = "蜡熟期"
 DEFAULT_VALIDATION_CSV = PROJECT_ROOT / "data" / "processed" / "observations" / "independent_validation_observations_p02_maize_p01_wheat.csv"
 DEFAULT_TRUTH_TEMPLATE = PROJECT_ROOT / "models" / "apsim_classic" / "modified_from_truth.apsim"
 EPS = 1e-9
+ACTIVE_SOBOL_PRIORITY = None
+ACTIVE_SYSTEM_SOBOL_PRIORITY = []
+
+
+def resolve_project_path(path: Path | str | None) -> Path | None:
+    if path is None:
+        return None
+    p = Path(path)
+    if p.is_absolute():
+        return p.resolve()
+    return (PROJECT_ROOT / p).resolve()
 
 
 def configure_output_dir(output_dir: Path | str) -> None:
     """运行时切换本轮搜索的输出目录，避免覆盖旧实验。"""
     global PROCESS_BIO, INDEX_PATH, BEST_DIR
-    PROCESS_BIO = Path(output_dir)
+    PROCESS_BIO = Path(output_dir).resolve()
     INDEX_PATH = PROCESS_BIO / "iteration_index.csv"
     BEST_DIR = PROCESS_BIO / "best"
 
@@ -208,6 +234,269 @@ WATER_YIELD_FIXED_DATE_CANDIDATES = [
 ]
 
 WATER_YIELD_MANAGER_NAME = "SobolWaterYieldIrrigation"
+
+SOBOL_TARGET_GROUP = {
+    "grain_yield": "yield_component",
+    "grain_number": "yield_component",
+    "grain_weight": "yield_component",
+    "flowering_date": "phenology",
+    "maturity_date": "phenology",
+    "biomass": "biomass_canopy",
+    "lai": "biomass_canopy",
+    "water_use_efficiency_yield": "biomass_canopy",
+    "water_use_efficiency_biomass": "biomass_canopy",
+}
+
+
+def read_csv_dicts(path: Path | str) -> list[dict]:
+    with open(path, "r", newline="", encoding="utf-8-sig") as handle:
+        return list(csv.DictReader(handle))
+
+
+def load_cultivar_sobol_priority(path: Path | str) -> dict:
+    """Load cultivar Sobol parameter priorities from the archived top table."""
+    path = Path(path)
+    if not path.exists():
+        return {}
+    out: dict[str, dict[str, list[str]]] = {}
+    grouped: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    for row in read_csv_dicts(path):
+        crop = str(row.get("crop", "")).strip().lower()
+        group = SOBOL_TARGET_GROUP.get(str(row.get("target_variable", "")).strip())
+        param = str(row.get("parameter_name", "")).strip()
+        if crop not in ("wheat", "maize") or not group or not param:
+            continue
+        grouped[(crop, group)].append(row)
+    for (crop, group), rows in grouped.items():
+        rows = sorted(rows, key=lambda r: float(r.get("ST") or 0.0), reverse=True)
+        values = []
+        for row in rows:
+            param = str(row.get("parameter_name", "")).strip()
+            if param and param not in values:
+                values.append(param)
+        out.setdefault(crop, {})[group] = values
+    return out
+
+
+def merged_sobol_priority(loaded: dict | None) -> dict:
+    merged = copy.deepcopy(SOBOL_PRIORITY)
+    for crop, groups in (loaded or {}).items():
+        for group, params in groups.items():
+            if params:
+                merged.setdefault(crop, {})[group] = params
+    return merged
+
+
+def load_system_sobol_priority(path: Path | str) -> list[dict]:
+    """Load global/system Sobol parameter priorities, collapsed by parameter key."""
+    path = Path(path)
+    if not path.exists():
+        return []
+    best_by_key: dict[str, dict] = {}
+    for row in read_csv_dicts(path):
+        key = str(row.get("parameter_key", "")).strip()
+        target = str(row.get("target_variable", "")).strip()
+        if not key or target not in SOBOL_TARGET_GROUP:
+            continue
+        try:
+            st = float(row.get("ST") or 0.0)
+        except Exception:
+            st = 0.0
+        if st <= 0:
+            continue
+        old = best_by_key.get(key)
+        if old is None or st > float(old.get("ST") or 0.0):
+            item = dict(row)
+            item["ST"] = st
+            best_by_key[key] = item
+    return sorted(best_by_key.values(), key=lambda r: float(r.get("ST") or 0.0), reverse=True)
+
+
+def _xml_tree_from_text(text: str) -> etree._ElementTree:
+    parser = etree.XMLParser(remove_blank_text=False, recover=True)
+    return etree.ElementTree(etree.fromstring(text.encode("utf-8"), parser=parser))
+
+
+def _xml_tree_to_text(tree: etree._ElementTree) -> str:
+    return etree.tostring(tree.getroot(), encoding="unicode", pretty_print=True)
+
+
+def _row_float(row: dict, key: str, default: float | None = None) -> float | None:
+    try:
+        value = row.get(key)
+        if value in (None, ""):
+            return default
+        return float(value)
+    except Exception:
+        return default
+
+
+def _bounded_system_value(old: float, row: dict, direction: str, step_scale: float) -> float:
+    sign = 1.0 if direction == "up" else -1.0
+    step = abs(float(old)) * float(step_scale)
+    if abs(float(old)) < EPS:
+        step = float(step_scale)
+    new = float(old) + sign * step
+    lower = _row_float(row, "lower_bound")
+    upper = _row_float(row, "upper_bound")
+    if lower is not None:
+        new = max(new, lower)
+    if upper is not None:
+        new = min(new, upper)
+    return new
+
+
+def apply_system_sobol_adjustment(truth_text: str, row: dict, direction: str, step_scale: float) -> tuple[str, dict]:
+    """Apply one global Sobol-selected .apsim parameter adjustment."""
+    tree = _xml_tree_from_text(truth_text)
+    root = tree.getroot()
+    nodes = root.xpath(str(row.get("xml_path", "")))
+    if not nodes:
+        raise ValueError(f"system Sobol xml_path not found: {row.get('xml_path')}")
+    node = nodes[0]
+    ptype = str(row.get("perturbation_type", "")).strip()
+    key = str(row.get("parameter_key", "")).strip()
+    pname = str(row.get("parameter_name", "")).strip()
+    if ptype == "absolute_scalar":
+        old = _row_float({"value": node.text}, "value")
+        if old is None:
+            raise ValueError(f"system Sobol scalar is not numeric: {key}")
+        new = _bounded_system_value(old, row, direction, step_scale)
+        node.text = base.fmt(new, 6)
+    elif ptype == "vector_multiplier":
+        old = 1.0
+        new = _bounded_system_value(old, row, direction, step_scale)
+        children = node.xpath("./*[local-name()='double']")
+        if not children:
+            raise ValueError(f"system Sobol vector has no layer values: {key}")
+        for child in children:
+            val = _row_float({"value": child.text}, "value")
+            if val is None:
+                raise ValueError(f"system Sobol vector contains non-numeric value: {key}")
+            child.text = base.fmt(val * new, 6)
+    else:
+        raise ValueError(f"unsupported system Sobol perturbation_type: {ptype}")
+    meta = {
+        "parameter_key": key,
+        "parameter_name": pname,
+        "old_value": old,
+        "new_value": new,
+        "direction": direction,
+        "step_scale": step_scale,
+        "sobol_ST": row.get("ST"),
+        "target_variable": row.get("target_variable"),
+        "reason": f"global Sobol guided {direction} adjustment for {key}",
+    }
+    return _xml_tree_to_text(tree), meta
+
+
+def apply_system_sobol_combo_adjustment(
+    truth_text: str,
+    row: dict,
+    system_direction: str,
+    system_step_scale: float,
+    initial_water_delta: float | None = None,
+    crit_fr_asw_delta: float | None = None,
+    args=None,
+) -> tuple[str, dict]:
+    """Apply a Sobol system adjustment plus one water-control adjustment."""
+    after, system_meta = apply_system_sobol_adjustment(
+        truth_text,
+        row,
+        direction=system_direction,
+        step_scale=system_step_scale,
+    )
+    combo_meta = {
+        "system_sobol_change": system_meta,
+        "initial_water_change": {},
+        "crit_fr_asw_change": {},
+    }
+    if initial_water_delta is not None:
+        old_cfg = parse_initial_water_config(after)
+        old = float(old_cfg.get("fraction_full") or 0.5)
+        lower = float(getattr(args, "initial_water_min", 0.10)) if args is not None else 0.10
+        upper = float(getattr(args, "initial_water_max", 1.00)) if args is not None else 1.00
+        new = base.clamp(old + float(initial_water_delta), lower, upper)
+        new_cfg = dict(old_cfg)
+        new_cfg["fraction_full"] = new
+        after = set_initial_water_config(after, new_cfg)
+        combo_meta["initial_water_change"] = {
+            "old_config": old_cfg,
+            "new_config": new_cfg,
+            "old_value": old,
+            "new_value": new,
+            "direction": "down" if new < old else "up",
+            "reason": "system Sobol combo search adjusted InitialWater.FractionFull",
+        }
+    if crit_fr_asw_delta is not None:
+        nodes = parse_crit_fr_asw(after)
+        if not nodes:
+            raise ValueError("system Sobol combo requested crit_fr_asw but no crit_fr_asw node was found")
+        node = nodes[0]
+        old = float(node["value"])
+        lower = float(getattr(args, "crit_fr_asw_min", 0.05)) if args is not None else 0.05
+        upper = float(getattr(args, "crit_fr_asw_max", 0.95)) if args is not None else 0.95
+        new = base.clamp(old + float(crit_fr_asw_delta), lower, upper)
+        after = set_crit_fr_asw(after, node, new)
+        combo_meta["crit_fr_asw_change"] = {
+            "old_value": old,
+            "new_value": new,
+            "direction": "down" if new < old else "up",
+            "reason": "system Sobol combo search adjusted crit_fr_asw",
+            "target_node": {k: v for k, v in node.items() if k != "span"},
+        }
+    return after, combo_meta
+
+
+def system_parameter_rows_from_truth_text(truth_text: str, scratch_path: Path) -> dict[str, dict]:
+    scratch_path.parent.mkdir(parents=True, exist_ok=True)
+    base.write_text(scratch_path, truth_text)
+    return {row["parameter_key"]: row for row in build_system_parameter_rows(scratch_path)}
+
+
+def choose_system_sobol_row(k: int, truth_text: str, scratch_path: Path, crop: str | None = None) -> dict | None:
+    if not ACTIVE_SYSTEM_SOBOL_PRIORITY:
+        return None
+    parameter_rows = system_parameter_rows_from_truth_text(truth_text, scratch_path)
+    target_crop = str(crop or "").lower()
+    candidates = []
+    for sobol_row in ACTIVE_SYSTEM_SOBOL_PRIORITY:
+        if target_crop and str(sobol_row.get("crop", "")).lower() not in ("", target_crop):
+            continue
+        param_row = parameter_rows.get(str(sobol_row.get("parameter_key", "")).strip())
+        if not param_row:
+            continue
+        item = dict(param_row)
+        item.update({f"sobol_{k2}": v for k2, v in sobol_row.items()})
+        item["ST"] = sobol_row.get("ST")
+        item["target_variable"] = sobol_row.get("target_variable")
+        candidates.append(item)
+    if not candidates and target_crop:
+        return choose_system_sobol_row(k, truth_text, scratch_path, crop=None)
+    if not candidates:
+        return None
+    return candidates[k % len(candidates)]
+
+
+def system_sobol_direction(row: dict, soil_diag: dict, yield_diag: dict, k: int) -> tuple[str, str]:
+    crop = (yield_diag or {}).get("crop_to_recover")
+    if crop in ("wheat", "maize") and not bool((yield_diag or {}).get("yield_constraint_passed")):
+        bias = (yield_diag or {}).get(f"{crop}_bias")
+        if bias == "sim_low":
+            return "up", f"{crop} yield is low; try increasing high-ST system parameter"
+        if bias == "sim_high":
+            return "down", f"{crop} yield is high; try decreasing high-ST system parameter"
+    action = (soil_diag or {}).get("recommended_action", "no_change")
+    pname = str(row.get("parameter_name", "")).lower()
+    if action in ("decrease_water", "reduce_events", "reduce_single_amount"):
+        if "cn" in pname:
+            return "up", "soil water is wet; increasing curve-number-like parameter may reduce retained water"
+        return "down" if k % 2 == 0 else "up", f"soil water is wet; deterministic Sobol local search for {row.get('parameter_key')}"
+    if action in ("increase_water", "increase_events"):
+        if "cn" in pname:
+            return "down", "soil water is dry; lowering curve-number-like parameter may retain more water"
+        return "up", f"soil water is dry; increasing high-ST system parameter"
+    return ("up" if k % 2 else "down"), "no strong water direction; deterministic alternating Sobol local search"
 
 
 def mean_valid(values):
@@ -1574,7 +1863,8 @@ def build_sobol_diagnosis(baseline_eval: dict, baseline_rows: list | None = None
 
 
 def choose_sobol_param(crop: str, group: str, k: int, params: dict) -> str:
-    priority = SOBOL_PRIORITY.get(crop, {}).get(group, [])
+    priority_source = ACTIVE_SOBOL_PRIORITY or SOBOL_PRIORITY
+    priority = priority_source.get(crop, {}).get(group, [])
     available = [p for p in priority if sobol_param_key(crop, p) in params]
     if not available:
         raise ValueError(f"sobol_phased 阶段 {crop}.{group} 没有可解析的候选参数；请检查 XML 或解析函数。")
@@ -1824,6 +2114,8 @@ def score_water_yield_objective(eval_obj: dict, custom_obj: dict, args) -> dict:
     )
     return {
         "water_yield_score": score,
+        "custom_score": _num_or_none(custom_obj.get("custom_score")),
+        "all_truth_score": _num_or_none(custom_obj.get("all_truth_score")),
         "soil_water_error": soil_water,
         "wheat_yield_error": wheat_y,
         "maize_yield_error": maize_y,
@@ -1888,6 +2180,8 @@ def score_hdsw_water_yield_objective(eval_obj: dict, custom_obj: dict, args) -> 
     return {
         "hdsw_water_yield_score": score,
         "water_yield_score": score,
+        "custom_score": _num_or_none(custom_obj.get("custom_score")),
+        "all_truth_score": _num_or_none(custom_obj.get("all_truth_score")),
         "soil_water_error": soil_water,
         "wheat_yield_error": wheat_y,
         "maize_yield_error": maize_y,
@@ -2039,6 +2333,7 @@ def is_water_yield_candidate_acceptable(baseline_custom: dict, candidate_custom:
     cw, cm = candidate_custom.get("wheat_yield_error"), candidate_custom.get("maize_yield_error")
     b_soil, c_soil = baseline_custom.get("soil_water_error"), candidate_custom.get("soil_water_error")
     b_score, c_score = baseline_custom.get("water_yield_score"), candidate_custom.get("water_yield_score")
+    b_custom_score, c_custom_score = baseline_custom.get("custom_score"), candidate_custom.get("custom_score")
     pheno_ok = bool(candidate_custom.get("phenology_passed"))
     yield_pass = bool(candidate_custom.get("yield_constraint_passed"))
     baseline_yield_pass = (
@@ -2053,6 +2348,19 @@ def is_water_yield_candidate_acceptable(baseline_custom: dict, candidate_custom:
         and (float(b_soil) - float(c_soil)) >= float(args.min_soil_water_improvement)
     )
     score_improved = b_score is not None and c_score is not None and float(c_score) < float(b_score)
+    custom_score_improvement_pct = None
+    if b_custom_score not in (None, 0) and c_custom_score is not None:
+        custom_score_improvement_pct = (float(b_custom_score) - float(c_custom_score)) / float(b_custom_score) * 100.0
+    custom_score_improved = (
+        bool(getattr(args, "allow_custom_score_acceptance", False))
+        and custom_score_improvement_pct is not None
+        and custom_score_improvement_pct >= float(getattr(args, "min_custom_score_improvement_pct", 1.0))
+    )
+    soil_within_custom_relaxation = (
+        b_soil is not None
+        and c_soil is not None
+        and float(c_soil) <= float(b_soil) + float(getattr(args, "max_soil_water_relaxation", args.min_soil_water_improvement))
+    )
     bio_bad = _degrade_too_much(baseline_custom.get("total_biomass_error"), candidate_custom.get("total_biomass_error"))
     structure_bad = _degrade_too_much(baseline_custom.get("structure_error"), candidate_custom.get("structure_error"))
 
@@ -2093,15 +2401,22 @@ def is_water_yield_candidate_acceptable(baseline_custom: dict, candidate_custom:
     if not score_improved:
         reasons.append("water_yield_score 未改善")
 
-    accepted = pheno_ok and yield_pass and soil_improved and score_improved and not bio_bad and not structure_bad
+    strict_accept = pheno_ok and yield_pass and soil_improved and score_improved and not bio_bad and not structure_bad
+    custom_accept = pheno_ok and yield_pass and custom_score_improved and soil_within_custom_relaxation and not bio_bad and not structure_bad
+    accepted = strict_accept or custom_accept
+    if custom_accept and not strict_accept:
+        reasons = ["custom_score 明显改善，且 soil_water 仅小幅不变/小幅恶化，临时放宽接受。"]
     return {
         "accepted": accepted,
         "reason": "；".join(reasons) if reasons else "soil_water 明显改善，产量硬约束和物候守门均通过。",
         "recovery_search": False,
         "soil_improved": soil_improved,
+        "soil_within_custom_relaxation": soil_within_custom_relaxation,
         "yield_constraint_passed": yield_pass,
         "phenology_passed": pheno_ok,
         "score_improved": score_improved,
+        "custom_score_acceptance": custom_accept,
+        "custom_score_improvement_pct": custom_score_improvement_pct,
     }
 
 
@@ -2121,6 +2436,7 @@ def is_hdsw_water_yield_candidate_acceptable(baseline_custom: dict, candidate_cu
     b_soil, c_soil = baseline_custom.get("soil_water_error"), candidate_custom.get("soil_water_error")
     b_score = baseline_custom.get("hdsw_water_yield_score", baseline_custom.get("water_yield_score"))
     c_score = candidate_custom.get("hdsw_water_yield_score", candidate_custom.get("water_yield_score"))
+    b_custom_score, c_custom_score = baseline_custom.get("custom_score"), candidate_custom.get("custom_score")
     pheno_ok = bool(candidate_custom.get("phenology_passed"))
     yield_pass = bool(candidate_custom.get("yield_constraint_passed"))
     baseline_yield_pass = (
@@ -2131,6 +2447,19 @@ def is_hdsw_water_yield_candidate_acceptable(baseline_custom: dict, candidate_cu
     )
     soil_not_worse = b_soil is not None and c_soil is not None and float(c_soil) <= float(b_soil) + float(args.min_soil_water_improvement)
     score_improved = b_score is not None and c_score is not None and float(c_score) < float(b_score)
+    custom_score_improvement_pct = None
+    if b_custom_score not in (None, 0) and c_custom_score is not None:
+        custom_score_improvement_pct = (float(b_custom_score) - float(c_custom_score)) / float(b_custom_score) * 100.0
+    custom_score_improved = (
+        bool(getattr(args, "allow_custom_score_acceptance", False))
+        and custom_score_improvement_pct is not None
+        and custom_score_improvement_pct >= float(getattr(args, "min_custom_score_improvement_pct", 1.0))
+    )
+    soil_within_custom_relaxation = (
+        b_soil is not None
+        and c_soil is not None
+        and float(c_soil) <= float(b_soil) + float(getattr(args, "max_soil_water_relaxation", args.min_soil_water_improvement))
+    )
     bio_bad = _degrade_too_much(baseline_custom.get("total_biomass_error"), candidate_custom.get("total_biomass_error"))
     structure_bad = _degrade_too_much(baseline_custom.get("structure_error"), candidate_custom.get("structure_error"))
     total_irrig = None
@@ -2178,15 +2507,22 @@ def is_hdsw_water_yield_candidate_acceptable(baseline_custom: dict, candidate_cu
         reasons.append("soil_water 改善幅度小于 min_soil_water_improvement")
     if not score_improved:
         reasons.append("hdsw_water_yield_score 未改善")
-    accepted = pheno_ok and yield_pass and soil_improved and score_improved and irrigation_ok and not bio_bad and not structure_bad
+    strict_accept = pheno_ok and yield_pass and soil_improved and score_improved and irrigation_ok and not bio_bad and not structure_bad
+    custom_accept = pheno_ok and yield_pass and custom_score_improved and soil_within_custom_relaxation and irrigation_ok and not bio_bad and not structure_bad
+    accepted = strict_accept or custom_accept
+    if custom_accept and not strict_accept:
+        reasons = ["custom_score 明显改善，且 soil_water 仅小幅不变/小幅恶化，临时放宽接受。"]
     return {
         "accepted": accepted,
         "reason": "；".join(reasons) if reasons else "soil_water 明显改善，yield 硬约束和物候守门均通过。",
         "recovery_search": False,
         "soil_improved": soil_improved,
+        "soil_within_custom_relaxation": soil_within_custom_relaxation,
         "yield_constraint_passed": yield_pass,
         "phenology_passed": pheno_ok,
         "score_improved": score_improved,
+        "custom_score_acceptance": custom_accept,
+        "custom_score_improvement_pct": custom_score_improvement_pct,
     }
 
 
@@ -2335,6 +2671,88 @@ def mutate_crit_fr_asw(base_value: float, soil_diag: dict, yield_diag: dict, arg
         reason = "按 HDSW water-yield 目标小步探索 crit_fr_asw"
     new = base.clamp(new, float(args.crit_fr_asw_min), float(args.crit_fr_asw_max))
     return new, {"old_value": old, "new_value": new, "direction": direction, "reason": reason}
+
+
+def mutate_auto_irrigation_rule(base_config: dict, soil_diag: dict, yield_diag: dict, args, k: int) -> tuple[dict, dict]:
+    """Deterministically tune APSIM automatic irrigation without random fixed events."""
+    cfg = copy.deepcopy(base_config)
+    action = (soil_diag or {}).get("recommended_action", "no_change")
+    crop = (yield_diag or {}).get("crop_to_recover")
+    crop_err = (yield_diag or {}).get(f"{crop}_yield_error") if crop in ("wheat", "maize") else None
+    target_yield = float(getattr(args, "target_yield_rel", 0.12))
+
+    old_thr = float(cfg.get("crit_fr_asw") or 0.60)
+    old_depth = float(cfg.get("asw_depth") or 800.0)
+    old_eff = float(cfg.get("irrigation_efficiency") or 0.85)
+    crit_step = float(getattr(args, "auto_irrigation_crit_step", getattr(args, "crit_fr_asw_step", 0.03)))
+    depth_step = float(getattr(args, "auto_irrigation_asw_depth_step", 100.0))
+    eff_step = float(getattr(args, "auto_irrigation_efficiency_step", 0.0))
+
+    if action in ("decrease_water", "reduce_events", "reduce_single_amount"):
+        thr_delta = -crit_step
+        depth_delta = -depth_step
+        eff_delta = -eff_step if action == "reduce_single_amount" else 0.0
+        reason = "soil_water 模拟偏湿：降低自动灌溉触发阈值，并缩浅 ASW 计算深度以减少单次补水"
+    elif crop_err is not None and crop_err > target_yield:
+        thr_delta = crit_step
+        depth_delta = depth_step if k % 2 == 0 else 0.0
+        eff_delta = eff_step
+        reason = "yield 需要恢复：提高自动灌溉触发阈值，必要时加深 ASW 计算深度"
+    elif action in ("increase_water", "increase_events"):
+        thr_delta = crit_step
+        depth_delta = depth_step
+        eff_delta = eff_step
+        reason = "soil_water 模拟偏干：提高自动灌溉触发阈值并加深 ASW 计算深度"
+    else:
+        sign = -1.0 if k % 2 == 0 else 1.0
+        thr_delta = sign * crit_step
+        depth_delta = sign * depth_step
+        eff_delta = 0.0
+        reason = "自动灌溉方向不明确：按确定性小步探索阈值和 ASW 计算深度"
+
+    new_thr = base.clamp(old_thr + thr_delta, float(args.crit_fr_asw_min), float(args.crit_fr_asw_max))
+    new_depth = base.clamp(
+        old_depth + depth_delta,
+        float(getattr(args, "auto_irrigation_asw_depth_min", 200.0)),
+        float(getattr(args, "auto_irrigation_asw_depth_max", 1000.0)),
+    )
+    new_eff = base.clamp(
+        old_eff + eff_delta,
+        float(getattr(args, "auto_irrigation_efficiency_min", 0.60)),
+        float(getattr(args, "auto_irrigation_efficiency_max", 0.95)),
+    )
+
+    cfg["mode"] = "threshold"
+    cfg["automatic_irrigation"] = "on"
+    cfg["fixed_enabled"] = "no"
+    cfg["events"] = []
+    cfg["crit_fr_asw"] = new_thr
+    cfg["asw_depth"] = new_depth
+    cfg["irrigation_efficiency"] = new_eff
+    cfg["threshold"] = {
+        "layer": "asw_depth",
+        "trigger_below": new_thr,
+        "amount_mm": None,
+        "asw_depth": new_depth,
+        "irrigation_efficiency": new_eff,
+    }
+    changed_fields = {
+        "crit_fr_asw": {"from": old_thr, "to": new_thr},
+        "asw_depth": {"from": old_depth, "to": new_depth},
+    }
+    if abs(new_eff - old_eff) > EPS:
+        changed_fields["irrigation_efficiency"] = {"from": old_eff, "to": new_eff}
+    return cfg, {
+        "mode": "auto_irrigation_rule",
+        "diagnosis_action": action,
+        "reason": reason,
+        "old_config": base_config,
+        "new_config": cfg,
+        "changed_fields": changed_fields,
+        "total_irrigation_mm_before": total_irrigation_mm(base_config),
+        "total_irrigation_mm_after": 0.0,
+        "random_irrigation_disabled": True,
+    }
 
 
 def _extract_tag(block: str, tag: str, default=None):
@@ -2626,7 +3044,12 @@ def pick_action_water_yield(k: int, baseline_eval: dict, baseline_water: dict, s
     if args.allow_irrigation_change:
         mode = args.irrigation_mode
         if mode == "mixed":
-            mode = ["threshold", "fixed_dates", "seeded_random"][k % 3]
+            choices = ["threshold", "fixed_dates"]
+            if bool(getattr(args, "allow_random_irrigation_change", False)):
+                choices.append("seeded_random")
+            mode = choices[k % len(choices)]
+        elif mode == "seeded_random" and not bool(getattr(args, "allow_random_irrigation_change", False)):
+            mode = "threshold"
         return {"action": f"irrigation_{mode}", "action_type": f"irrigation_{mode}", "irrigation_mode": mode}
     crop = "maize" if (y.get("maize") or 0.0) >= (y.get("wheat") or 0.0) else "wheat"
     return {"action": f"{crop}_cultivar", "action_type": f"{crop}_cultivar_sobol", "crop": crop, "sobol_phase": f"{crop}_yield_component"}
@@ -2646,13 +3069,21 @@ def pick_action_hdsw_water_yield(k: int, baseline_eval: dict, baseline_water: di
         recovery_cycle = []
         if args.allow_cultivar_change:
             recovery_cycle.append({"action": f"{crop}_cultivar", "action_type": f"{crop}_cultivar_sobol", "crop": crop, "sobol_phase": f"{crop}_yield_component"})
+        if args.allow_system_sobol_combo and ACTIVE_SYSTEM_SOBOL_PRIORITY:
+            recovery_cycle.append({"action": "system_sobol_combo", "action_type": "system_sobol_combo", "crop": crop})
+        if args.allow_system_sobol_change and ACTIVE_SYSTEM_SOBOL_PRIORITY:
+            recovery_cycle.append({"action": "system_sobol", "action_type": "system_sobol", "crop": crop})
         if recommended in ("decrease_water", "reduce_events", "reduce_single_amount"):
             if args.allow_initial_water_change:
                 recovery_cycle.append({"action": "initial_water", "action_type": "initial_water"})
             if args.allow_crit_fr_asw_change:
                 recovery_cycle.append({"action": "crit_fr_asw", "action_type": "crit_fr_asw"})
+            if args.allow_auto_irrigation_rule_change:
+                recovery_cycle.append({"action": "auto_irrigation_rule", "action_type": "auto_irrigation_rule"})
             if args.allow_irrigation_change:
                 recovery_cycle.append({"action": "irrigation_threshold", "action_type": "irrigation_threshold", "irrigation_mode": "threshold"})
+        elif args.allow_auto_irrigation_rule_change:
+            recovery_cycle.append({"action": "auto_irrigation_rule", "action_type": "auto_irrigation_rule"})
         elif args.allow_irrigation_change:
             recovery_cycle.append({"action": "irrigation_threshold", "action_type": "irrigation_threshold", "irrigation_mode": "threshold"})
         if not recovery_cycle:
@@ -2660,14 +3091,25 @@ def pick_action_hdsw_water_yield(k: int, baseline_eval: dict, baseline_water: di
         return recovery_cycle[k % len(recovery_cycle)]
 
     water_cycle = []
+    if args.allow_system_sobol_combo and ACTIVE_SYSTEM_SOBOL_PRIORITY:
+        water_cycle.append({"action": "system_sobol_combo", "action_type": "system_sobol_combo", "crop": None})
+    if args.allow_system_sobol_change and ACTIVE_SYSTEM_SOBOL_PRIORITY:
+        water_cycle.append({"action": "system_sobol", "action_type": "system_sobol", "crop": None})
     if args.allow_initial_water_change:
         water_cycle.append({"action": "initial_water", "action_type": "initial_water"})
     if args.allow_crit_fr_asw_change:
         water_cycle.append({"action": "crit_fr_asw", "action_type": "crit_fr_asw"})
+    if args.allow_auto_irrigation_rule_change:
+        water_cycle.append({"action": "auto_irrigation_rule", "action_type": "auto_irrigation_rule"})
     if args.allow_irrigation_change:
         mode = args.irrigation_mode
         if mode == "mixed":
-            mode = ["threshold", "fixed_dates", "seeded_random"][k % 3]
+            choices = ["threshold", "fixed_dates"]
+            if bool(getattr(args, "allow_random_irrigation_change", False)):
+                choices.append("seeded_random")
+            mode = choices[k % len(choices)]
+        elif mode == "seeded_random" and not bool(getattr(args, "allow_random_irrigation_change", False)):
+            mode = "threshold"
         water_cycle.append({"action": f"irrigation_{mode}", "action_type": f"irrigation_{mode}", "irrigation_mode": mode})
     if args.allow_cultivar_change:
         crop2 = "maize" if k % 2 == 0 else "wheat"
@@ -2840,14 +3282,23 @@ def parse_args():
     p.add_argument(
         "--irrigation_mode",
         type=str,
-        default="mixed",
+        default="threshold",
         choices=["fixed_dates", "threshold", "seeded_random", "mixed"],
     )
     p.add_argument("--irrigation_seed", type=int, default=20260519)
     p.add_argument("--allow_cultivar_change", action=argparse.BooleanOptionalAction, default=True)
-    p.add_argument("--allow_irrigation_change", action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument("--allow_irrigation_change", action=argparse.BooleanOptionalAction, default=False)
+    p.add_argument("--allow_random_irrigation_change", action=argparse.BooleanOptionalAction, default=False)
+    p.add_argument("--allow_auto_irrigation_rule_change", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--allow_initial_water_change", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--allow_crit_fr_asw_change", action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument("--allow_system_sobol_combo", action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument("--allow_system_sobol_change", action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument("--system_step_scale", type=float, default=0.03)
+    p.add_argument("--combo_initial_water_step", type=float, default=0.02)
+    p.add_argument("--combo_crit_fr_asw_step", type=float, default=0.02)
+    p.add_argument("--cultivar_sobol_csv", type=Path, default=DEFAULT_CULTIVAR_SOBOL_PRIORITY_CSV)
+    p.add_argument("--system_sobol_csv", type=Path, default=DEFAULT_SYSTEM_SOBOL_PRIORITY_CSV)
     p.add_argument("--water_yield_patience", type=int, default=30)
     p.add_argument("--min_soil_water_improvement", type=float, default=0.005)
     p.add_argument("--initial_water_step", type=float, default=0.05)
@@ -2856,6 +3307,16 @@ def parse_args():
     p.add_argument("--crit_fr_asw_step", type=float, default=0.05)
     p.add_argument("--crit_fr_asw_min", type=float, default=0.05)
     p.add_argument("--crit_fr_asw_max", type=float, default=0.95)
+    p.add_argument("--auto_irrigation_crit_step", type=float, default=0.03)
+    p.add_argument("--auto_irrigation_asw_depth_step", type=float, default=100.0)
+    p.add_argument("--auto_irrigation_asw_depth_min", type=float, default=200.0)
+    p.add_argument("--auto_irrigation_asw_depth_max", type=float, default=1000.0)
+    p.add_argument("--auto_irrigation_efficiency_step", type=float, default=0.0)
+    p.add_argument("--auto_irrigation_efficiency_min", type=float, default=0.60)
+    p.add_argument("--auto_irrigation_efficiency_max", type=float, default=0.95)
+    p.add_argument("--allow_custom_score_acceptance", action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument("--min_custom_score_improvement_pct", type=float, default=1.0)
+    p.add_argument("--max_soil_water_relaxation", type=float, default=0.01)
     p.add_argument("--max_rounds_without_yield_pass", type=int, default=80)
     p.add_argument("--wheat_density_min", type=float, default=70.0)
     p.add_argument("--wheat_density_max", type=float, default=380.0)
@@ -2889,9 +3350,18 @@ def parse_args():
 
 
 def main():
+    global ACTIVE_SOBOL_PRIORITY, ACTIVE_SYSTEM_SOBOL_PRIORITY
     args = parse_args()
     if args.output_dir is None:
         args.output_dir = DEFAULT_HDSW_OUTPUT_DIR if args.action_mode == "hdsw_water_yield_search" else DEFAULT_OUTPUT_DIR
+    args.output_dir = resolve_project_path(args.output_dir)
+    args.truth_template = resolve_project_path(args.truth_template)
+    args.validation_csv = resolve_project_path(args.validation_csv)
+    args.hdsw_soil_source = resolve_project_path(args.hdsw_soil_source)
+    args.cultivar_sobol_csv = resolve_project_path(args.cultivar_sobol_csv)
+    args.system_sobol_csv = resolve_project_path(args.system_sobol_csv)
+    ACTIVE_SOBOL_PRIORITY = merged_sobol_priority(load_cultivar_sobol_priority(args.cultivar_sobol_csv))
+    ACTIVE_SYSTEM_SOBOL_PRIORITY = load_system_sobol_priority(args.system_sobol_csv)
     configure_output_dir(args.output_dir)
     if args.action_mode == "sobol_phased":
         args.cultivar_only = True
@@ -3018,6 +3488,12 @@ def main():
         initial_water_changed = False
         crit_fr_asw_meta = {}
         crit_fr_asw_changed = False
+        auto_irrigation_rule_meta = {}
+        auto_irrigation_rule_changed = False
+        system_sobol_meta = {}
+        system_sobol_changed = False
+        system_sobol_combo_meta = {}
+        system_sobol_combo_changed = False
         soil_water_diagnosis = diagnose_soil_water_error(baseline_rows_for_diag)
         yield_diagnosis = diagnose_yield_error(baseline_eval, args)
         if args.action_mode == "sobol_phased":
@@ -3204,6 +3680,26 @@ def main():
                     "changed_params": changed,
                 }
             )
+        elif action == "auto_irrigation_rule":
+            scope = "auto_irrigation_rule"
+            non_cultivar_changed = True
+            auto_irrigation_rule_changed = True
+            old_cfg = parse_irrigation_config(truth_before)
+            new_cfg, auto_irrigation_rule_meta = mutate_auto_irrigation_rule(
+                old_cfg,
+                soil_water_diagnosis,
+                yield_diagnosis,
+                args,
+                k,
+            )
+            truth_after = set_irrigation_config(truth_after, new_cfg)
+            non_cultivar_changes.append(
+                {
+                    "factor": "auto_irrigation_rule",
+                    "changed_fields": auto_irrigation_rule_meta.get("changed_fields"),
+                    "reason": auto_irrigation_rule_meta.get("reason"),
+                }
+            )
         elif action in ("irrigation_fixed_dates", "irrigation_threshold", "irrigation_seeded_random"):
             scope = "irrigation_only"
             non_cultivar_changed = True
@@ -3273,6 +3769,83 @@ def main():
                     "from": crit_fr_asw_meta.get("old_value"),
                     "to": crit_fr_asw_meta.get("new_value"),
                     "reason": crit_fr_asw_meta.get("reason"),
+                }
+            )
+        elif action == "system_sobol":
+            scope = "system_sobol_only"
+            non_cultivar_changed = True
+            system_sobol_changed = True
+            system_row = choose_system_sobol_row(
+                k,
+                truth_before,
+                iter_dir / "system_sobol_probe.apsim",
+                crop=(water_plan or {}).get("crop") or yield_diagnosis.get("crop_to_recover"),
+            )
+            if system_row is None:
+                raise ValueError("没有可用于当前 truth.apsim 的全局 Sobol 系统参数")
+            direction, direction_reason = system_sobol_direction(system_row, soil_water_diagnosis, yield_diagnosis, k)
+            truth_after, system_sobol_meta = apply_system_sobol_adjustment(
+                truth_after,
+                system_row,
+                direction=direction,
+                step_scale=args.system_step_scale,
+            )
+            system_sobol_meta["direction_reason"] = direction_reason
+            non_cultivar_changes.append(
+                {
+                    "factor": "system_sobol",
+                    "parameter_key": system_sobol_meta.get("parameter_key"),
+                    "parameter_name": system_sobol_meta.get("parameter_name"),
+                    "from": system_sobol_meta.get("old_value"),
+                    "to": system_sobol_meta.get("new_value"),
+                    "direction": system_sobol_meta.get("direction"),
+                    "sobol_ST": system_sobol_meta.get("sobol_ST"),
+                    "reason": direction_reason,
+                }
+            )
+        elif action == "system_sobol_combo":
+            scope = "system_sobol_combo"
+            non_cultivar_changed = True
+            system_sobol_combo_changed = True
+            system_row = choose_system_sobol_row(
+                k,
+                truth_before,
+                iter_dir / "system_sobol_combo_probe.apsim",
+                crop=(water_plan or {}).get("crop") or yield_diagnosis.get("crop_to_recover"),
+            )
+            if system_row is None:
+                raise ValueError("没有可用于当前 truth.apsim 的全局 Sobol 系统参数组合候选")
+            direction, direction_reason = system_sobol_direction(system_row, soil_water_diagnosis, yield_diagnosis, k)
+            water_action = (soil_water_diagnosis or {}).get("recommended_action", "no_change")
+            water_sign = -1.0 if water_action in ("decrease_water", "reduce_events", "reduce_single_amount") else 1.0
+            use_initial_water = (k % 2 == 0)
+            truth_after, system_sobol_combo_meta = apply_system_sobol_combo_adjustment(
+                truth_after,
+                system_row,
+                system_direction=direction,
+                system_step_scale=args.system_step_scale,
+                initial_water_delta=water_sign * float(args.combo_initial_water_step) if use_initial_water else None,
+                crit_fr_asw_delta=water_sign * float(args.combo_crit_fr_asw_step) if not use_initial_water else None,
+                args=args,
+            )
+            system_sobol_combo_meta["direction_reason"] = direction_reason
+            system_sobol_meta = system_sobol_combo_meta.get("system_sobol_change", {})
+            initial_water_meta = system_sobol_combo_meta.get("initial_water_change", {})
+            crit_fr_asw_meta = system_sobol_combo_meta.get("crit_fr_asw_change", {})
+            initial_water_changed = bool(initial_water_meta)
+            crit_fr_asw_changed = bool(crit_fr_asw_meta)
+            non_cultivar_changes.append(
+                {
+                    "factor": "system_sobol_combo",
+                    "parameter_key": system_sobol_meta.get("parameter_key"),
+                    "parameter_name": system_sobol_meta.get("parameter_name"),
+                    "from": system_sobol_meta.get("old_value"),
+                    "to": system_sobol_meta.get("new_value"),
+                    "direction": system_sobol_meta.get("direction"),
+                    "sobol_ST": system_sobol_meta.get("sobol_ST"),
+                    "initial_water_change": initial_water_meta,
+                    "crit_fr_asw_change": crit_fr_asw_meta,
+                    "reason": direction_reason,
                 }
             )
         elif action == "soil_only":
@@ -3392,10 +3965,16 @@ def main():
                 locked = base_locked + ["soil", "fertilizer", "irrigation"]
         elif scope == "irrigation_only":
             locked = ["weather", "rotation", "sowing_window", "residue", "tillage", "soil", "fertilizer", "wheat_cultivar", "maize_cultivar"]
+        elif scope == "auto_irrigation_rule":
+            locked = ["weather", "rotation", "sowing_window", "residue", "tillage", "soil", "fertilizer", "wheat_cultivar", "maize_cultivar"]
         elif scope == "initial_water_only":
             locked = ["weather", "rotation", "sowing_window", "irrigation", "residue", "tillage", "soil_physical_properties", "fertilizer", "wheat_cultivar", "maize_cultivar"]
         elif scope == "crit_fr_asw_only":
             locked = ["weather", "rotation", "sowing_window", "residue", "tillage", "soil", "fertilizer", "wheat_cultivar", "maize_cultivar"]
+        elif scope == "system_sobol_only":
+            locked = ["weather", "rotation", "sowing_window", "irrigation", "residue", "tillage", "fertilizer", "wheat_cultivar", "maize_cultivar"]
+        elif scope == "system_sobol_combo":
+            locked = ["weather", "rotation", "sowing_window", "residue", "tillage", "fertilizer", "wheat_cultivar", "maize_cultivar"]
         elif scope == "soil_only":
             locked = base_locked + ["fertilizer", "wheat_cultivar", "maize_cultivar"]
         elif scope == "sowing_only":
@@ -3453,6 +4032,8 @@ def main():
                     },
                     "action_type": (water_plan or {}).get("action_type", action),
                     "irrigation_changed": irrigation_changed,
+                    "auto_irrigation_rule_changed": auto_irrigation_rule_changed,
+                    "auto_irrigation_rule_change": auto_irrigation_rule_meta,
                     "cultivar_changed": bool(cultivar_changes),
                     "irrigation_change": {
                         "old_config": irrigation_meta.get("old_config"),
@@ -3464,6 +4045,10 @@ def main():
                     },
                     "initial_water_change": initial_water_meta,
                     "crit_fr_asw_change": crit_fr_asw_meta,
+                    "system_sobol_changed": system_sobol_changed,
+                    "system_sobol_change": system_sobol_meta,
+                    "system_sobol_combo_changed": system_sobol_combo_changed,
+                    "system_sobol_combo_change": system_sobol_combo_meta,
                     "cultivar_change": {
                         "crop": sobol_meta.get("crop"),
                         "parameter": sobol_meta.get("parameter_name"),
@@ -3522,8 +4107,14 @@ def main():
                     "soil_water_diagnosis": soil_water_diagnosis,
                     "yield_diagnosis": yield_diagnosis,
                     "irrigation_change": irrigation_meta,
+                    "auto_irrigation_rule_changed": auto_irrigation_rule_changed,
+                    "auto_irrigation_rule_change": auto_irrigation_rule_meta,
                     "initial_water_change": initial_water_meta,
                     "crit_fr_asw_change": crit_fr_asw_meta,
+                    "system_sobol_changed": system_sobol_changed,
+                    "system_sobol_change": system_sobol_meta,
+                    "system_sobol_combo_changed": system_sobol_combo_changed,
+                    "system_sobol_combo_change": system_sobol_combo_meta,
                     "cultivar_change": {
                         "crop": sobol_meta.get("crop"),
                         "parameter": sobol_meta.get("parameter_name"),
@@ -3590,6 +4181,8 @@ def main():
                 f"- 灌溉变化：{json.dumps(irrigation_meta, ensure_ascii=False) if irrigation_meta else '无'}\n"
                 f"- 初始水变化：{json.dumps(initial_water_meta, ensure_ascii=False) if initial_water_meta else '无'}\n"
                 f"- crit_fr_asw 变化：{json.dumps(crit_fr_asw_meta, ensure_ascii=False) if crit_fr_asw_meta else '无'}\n"
+                f"- 全局 Sobol 系统参数变化：{json.dumps(system_sobol_meta, ensure_ascii=False) if system_sobol_meta else '无'}\n"
+                f"- 全局 Sobol 组合变化：{json.dumps(system_sobol_combo_meta, ensure_ascii=False) if system_sobol_combo_meta else '无'}\n"
                 f"- 是否接受 candidate：{'是' if better else '否'}\n"
                 f"- 接受/拒绝原因：{water_decision.get('reason') or 'NA'}\n\n"
             )
