@@ -56,6 +56,136 @@ EPS = 1e-9
 ACTIVE_SOBOL_PRIORITY = None
 ACTIVE_SYSTEM_SOBOL_PRIORITY = []
 
+PARETO_CANDIDATE_FIELDS = [
+    "iteration",
+    "action_type",
+    "changed_parameters",
+    "custom_score",
+    "water_yield_score",
+    "soil_water_error",
+    "wheat_yield_error",
+    "maize_yield_error",
+    "total_biomass_error",
+    "structure_error",
+    "phenology_error_days_max",
+    "yield_constraint_passed",
+    "phenology_passed",
+    "pareto_rank",
+    "category",
+    "candidate_dir",
+    "irrigation_event_count",
+    "total_irrigation_mm",
+    "max_single_irrigation_mm",
+    "soil_water_sawtooth_score",
+    "max_soil_water_daily_jump",
+]
+
+PARETO_MAIZE_PARAMS = ["rue", "GNmaxCoef", "potKernelWt", "tt_flag_to_flower", "tt_flower_to_maturity"]
+PARETO_WHEAT_PARAMS = ["max_grain_size", "grains_per_gram_stem", "tt_start_grain_fill"]
+PARETO_SYSTEM_NAME_PATTERNS = ["cnred", "diffusslope", " kl", ".kl", "_kl", " maize xf", "maize.xf", "maize_xf", " xf"]
+PARETO_IRRIGATION_AMOUNT_GRID = [
+    {"crit_fr_asw": 0.56, "asw_depth": 760.0, "max_single_irrigation_mm": 46.0},
+    {"crit_fr_asw": 0.56, "asw_depth": 740.0, "max_single_irrigation_mm": 45.0},
+    {"crit_fr_asw": 0.56, "asw_depth": 720.0, "max_single_irrigation_mm": 44.0},
+    {"crit_fr_asw": 0.56, "asw_depth": 700.0, "max_single_irrigation_mm": 43.0},
+    {"crit_fr_asw": 0.54, "asw_depth": 760.0, "max_single_irrigation_mm": 46.0},
+    {"crit_fr_asw": 0.54, "asw_depth": 740.0, "max_single_irrigation_mm": 45.0},
+    {"crit_fr_asw": 0.52, "asw_depth": 760.0, "max_single_irrigation_mm": 46.0},
+    {"crit_fr_asw": 0.50, "asw_depth": 760.0, "max_single_irrigation_mm": 46.0},
+    {"crit_fr_asw": 0.56, "asw_depth": 650.0, "max_single_irrigation_mm": 40.0},
+    {"crit_fr_asw": 0.50, "asw_depth": 500.0, "max_single_irrigation_mm": 35.0},
+    {"crit_fr_asw": 0.45, "asw_depth": 500.0, "max_single_irrigation_mm": 35.0},
+    {"crit_fr_asw": 0.45, "asw_depth": 400.0, "max_single_irrigation_mm": 30.0},
+]
+PARETO_IRRIGATION_RECOVERY_GRID = [
+    {"crit_fr_asw": 0.56, "asw_depth": 790.0, "max_single_irrigation_mm": 48.0, "wheat_param": "max_grain_size"},
+    {"crit_fr_asw": 0.56, "asw_depth": 780.0, "max_single_irrigation_mm": 47.5, "wheat_param": "max_grain_size"},
+    {"crit_fr_asw": 0.56, "asw_depth": 770.0, "max_single_irrigation_mm": 47.0, "wheat_param": "max_grain_size"},
+    {"crit_fr_asw": 0.56, "asw_depth": 760.0, "max_single_irrigation_mm": 46.0, "wheat_param": "max_grain_size"},
+    {"crit_fr_asw": 0.56, "asw_depth": 750.0, "max_single_irrigation_mm": 45.5, "wheat_param": "grains_per_gram_stem"},
+    {"crit_fr_asw": 0.56, "asw_depth": 740.0, "max_single_irrigation_mm": 45.0, "wheat_param": "grains_per_gram_stem"},
+]
+PARETO_IRRIGATION_SMOOTHING_GRID = [
+    {
+        "mode": "hybrid_smoothing",
+        "crit_fr_asw": 0.54,
+        "asw_depth": 790.0,
+        "irrigation_efficiency": 0.85,
+        "max_single_irrigation_mm": 48.0,
+        "events": [
+            {"date": "2025-03-12", "amount_mm": 8.0},
+            {"date": "2025-03-26", "amount_mm": 8.0},
+            {"date": "2025-04-09", "amount_mm": 8.0},
+            {"date": "2025-04-23", "amount_mm": 8.0},
+            {"date": "2025-07-08", "amount_mm": 10.0},
+            {"date": "2025-07-22", "amount_mm": 10.0},
+            {"date": "2025-08-05", "amount_mm": 10.0},
+            {"date": "2025-08-19", "amount_mm": 10.0},
+        ],
+    },
+    {
+        "mode": "threshold_smoothing",
+        "crit_fr_asw": 0.54,
+        "asw_depth": 760.0,
+        "irrigation_efficiency": 0.82,
+        "max_single_irrigation_mm": 44.0,
+    },
+    {
+        "mode": "fixed_dates_smoothing",
+        "events": [
+            {"date": "2025-03-18", "amount_mm": 18.0},
+            {"date": "2025-04-02", "amount_mm": 18.0},
+            {"date": "2025-04-17", "amount_mm": 18.0},
+            {"date": "2025-05-02", "amount_mm": 16.0},
+            {"date": "2025-07-12", "amount_mm": 20.0},
+            {"date": "2025-07-27", "amount_mm": 20.0},
+            {"date": "2025-08-11", "amount_mm": 20.0},
+            {"date": "2025-08-26", "amount_mm": 18.0},
+        ],
+        "irrigation_efficiency": 0.85,
+    },
+    {
+        "mode": "hybrid_smoothing",
+        "crit_fr_asw": 0.52,
+        "asw_depth": 780.0,
+        "irrigation_efficiency": 0.84,
+        "max_single_irrigation_mm": 47.0,
+        "events": [
+            {"date": "2025-03-10", "amount_mm": 6.0},
+            {"date": "2025-03-24", "amount_mm": 6.0},
+            {"date": "2025-04-07", "amount_mm": 8.0},
+            {"date": "2025-04-21", "amount_mm": 8.0},
+            {"date": "2025-07-06", "amount_mm": 8.0},
+            {"date": "2025-07-20", "amount_mm": 8.0},
+            {"date": "2025-08-03", "amount_mm": 8.0},
+            {"date": "2025-08-17", "amount_mm": 8.0},
+            {"date": "2025-08-31", "amount_mm": 6.0},
+        ],
+    },
+    {
+        "mode": "threshold_smoothing",
+        "crit_fr_asw": 0.52,
+        "asw_depth": 740.0,
+        "irrigation_efficiency": 0.80,
+        "max_single_irrigation_mm": 42.0,
+    },
+    {
+        "mode": "fixed_dates_smoothing",
+        "events": [
+            {"date": "2025-03-12", "amount_mm": 15.0},
+            {"date": "2025-03-27", "amount_mm": 15.0},
+            {"date": "2025-04-11", "amount_mm": 15.0},
+            {"date": "2025-04-26", "amount_mm": 15.0},
+            {"date": "2025-07-08", "amount_mm": 18.0},
+            {"date": "2025-07-23", "amount_mm": 18.0},
+            {"date": "2025-08-07", "amount_mm": 18.0},
+            {"date": "2025-08-22", "amount_mm": 18.0},
+            {"date": "2025-09-06", "amount_mm": 15.0},
+        ],
+        "irrigation_efficiency": 0.85,
+    },
+]
+
 
 def resolve_project_path(path: Path | str | None) -> Path | None:
     if path is None:
@@ -207,6 +337,8 @@ PARAM_BOUNDS = {
     ("maize", "tt_endjuv_to_init"): (120.0, 360.0),
     ("maize", "tt_flag_to_flower"): (15.0, 90.0),
     ("maize", "tt_flower_to_maturity"): (650.0, 1050.0),
+    ("maize", "potKernelWt"): (180.0, 480.0),
+    ("maize", "GNmaxCoef"): (180.0, 480.0),
     ("maize", "rue"): (2.0, 4.5),
     ("maize", "largestLeafParams[0]"): (300.0, 1100.0),
     ("maize", "largestLeafParams[1]"): (-3.0, 1.0),
@@ -216,6 +348,7 @@ PARAM_BOUNDS = {
     ("wheat", "tt_end_of_juvenile"): (260.0, 520.0),
     ("wheat", "tt_floral_initiation"): (320.0, 700.0),
     ("wheat", "tt_start_grain_fill"): (450.0, 760.0),
+    ("wheat", "grains_per_gram_stem"): (18.0, 42.0),
     ("wheat", "max_grain_size"): (0.035, 0.075),
     ("wheat", "rue"): (1.0, 3.5),
     ("wheat", "largestLeafParams[1]"): (-3.0, 1.0),
@@ -2204,6 +2337,263 @@ def score_hdsw_water_yield_objective(eval_obj: dict, custom_obj: dict, args) -> 
     }
 
 
+def _candidate_water_metrics(metrics: dict) -> dict:
+    return (
+        metrics.get("candidate_water_yield")
+        or metrics.get("candidate_hdsw_water_yield")
+        or {}
+    )
+
+
+def build_pareto_candidate_row(
+    iteration: int,
+    action_type: str,
+    changed_parameters: dict,
+    metrics: dict,
+    args,
+    candidate_dir: Path | str | None = None,
+) -> dict:
+    custom = metrics.get("candidate_custom") or {}
+    group_scores = custom.get("group_scores") or {}
+    water = _candidate_water_metrics(metrics)
+    irrigation_stats = metrics.get("candidate_irrigation_stats") or {}
+    sawtooth = metrics.get("candidate_soil_water_sawtooth") or {}
+    wheat_yield = _num_or_none(water.get("wheat_yield_error"))
+    maize_yield = _num_or_none(water.get("maize_yield_error"))
+    pheno_max = _num_or_none(water.get("phenology_error_days_max"))
+    if pheno_max is None:
+        pheno_max = _num_or_none(custom.get("phenology_error_days_max"))
+    yield_passed = (
+        wheat_yield is not None
+        and maize_yield is not None
+        and wheat_yield <= float(args.target_yield_rel)
+        and maize_yield <= float(args.target_yield_rel)
+    )
+    pheno_passed = pheno_max is not None and pheno_max <= float(args.pheno_guard_days)
+    return {
+        "iteration": iteration,
+        "action_type": action_type,
+        "changed_parameters": json.dumps(changed_parameters or {}, ensure_ascii=False, sort_keys=True),
+        "custom_score": _num_or_none(custom.get("custom_score")),
+        "water_yield_score": _num_or_none(water.get("water_yield_score") or water.get("hdsw_water_yield_score")),
+        "soil_water_error": _num_or_none(water.get("soil_water_error") if "soil_water_error" in water else group_scores.get("soil_water")),
+        "wheat_yield_error": wheat_yield,
+        "maize_yield_error": maize_yield,
+        "total_biomass_error": _num_or_none(water.get("total_biomass_error") if "total_biomass_error" in water else group_scores.get("total_biomass")),
+        "structure_error": _num_or_none(water.get("structure_error") if "structure_error" in water else group_scores.get("structure_biomass_leaf_stem")),
+        "phenology_error_days_max": pheno_max,
+        "yield_constraint_passed": yield_passed,
+        "phenology_passed": pheno_passed,
+        "pareto_rank": None,
+        "category": "unranked",
+        "candidate_dir": "" if candidate_dir is None else str(candidate_dir),
+        "irrigation_event_count": irrigation_stats.get("event_count"),
+        "total_irrigation_mm": irrigation_stats.get("total_irrigation_mm"),
+        "max_single_irrigation_mm": irrigation_stats.get("max_single_irrigation_mm"),
+        "soil_water_sawtooth_score": _num_or_none(sawtooth.get("soil_water_sawtooth_score")),
+        "max_soil_water_daily_jump": _num_or_none(sawtooth.get("max_daily_jump")),
+    }
+
+
+def _pareto_sort_value(row: dict, key: str) -> float:
+    value = _num_or_none(row.get(key))
+    return float("inf") if value is None else float(value)
+
+
+def dominates_pareto(a: dict, b: dict) -> bool:
+    objectives = ["custom_score", "water_yield_score", "soil_water_error", "soil_water_sawtooth_score"]
+    a_vals = [_pareto_sort_value(a, k) for k in objectives]
+    b_vals = [_pareto_sort_value(b, k) for k in objectives]
+    return all(x <= y for x, y in zip(a_vals, b_vals)) and any(x < y for x, y in zip(a_vals, b_vals))
+
+
+def rank_pareto_candidates(rows: list[dict]) -> list[dict]:
+    feasible = [
+        dict(r)
+        for r in rows
+        if bool(r.get("yield_constraint_passed")) and bool(r.get("phenology_passed"))
+    ]
+    record_only = [
+        dict(r)
+        for r in rows
+        if not (bool(r.get("yield_constraint_passed")) and bool(r.get("phenology_passed")))
+    ]
+    remaining = feasible
+    ranked = []
+    rank = 1
+    while remaining:
+        front = []
+        for row in remaining:
+            if not any(dominates_pareto(other, row) for other in remaining if other is not row):
+                front.append(row)
+        front.sort(
+            key=lambda r: (
+                _pareto_sort_value(r, "custom_score"),
+                _pareto_sort_value(r, "water_yield_score"),
+                _pareto_sort_value(r, "soil_water_error"),
+                _pareto_sort_value(r, "soil_water_sawtooth_score"),
+                int(r.get("iteration") or 0),
+            )
+        )
+        for row in front:
+            row["pareto_rank"] = rank
+            row["category"] = "pareto_feasible" if rank == 1 else "pareto_feasible_lower_rank"
+        ranked.extend(front)
+        remaining = [r for r in remaining if r not in front]
+        rank += 1
+    record_only.sort(
+        key=lambda r: (
+            _pareto_sort_value(r, "custom_score"),
+            _pareto_sort_value(r, "water_yield_score"),
+            int(r.get("iteration") or 0),
+        )
+    )
+    for row in record_only:
+        row["pareto_rank"] = rank
+        row["category"] = "constraint_record_only"
+    return ranked + record_only
+
+
+def write_pareto_candidates_csv(path: Path, rows: list[dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=PARETO_CANDIDATE_FIELDS)
+        w.writeheader()
+        for row in rows:
+            w.writerow({k: row.get(k) for k in PARETO_CANDIDATE_FIELDS})
+
+
+def best_pareto_row(rows: list[dict], key: str, require_feasible: bool = True) -> dict | None:
+    candidates = [r for r in rows if (not require_feasible or r.get("category") != "constraint_record_only")]
+    if require_feasible and not candidates:
+        candidates = list(rows)
+    candidates = [r for r in candidates if _num_or_none(r.get(key)) is not None]
+    if not candidates:
+        return None
+    return min(candidates, key=lambda r: (_pareto_sort_value(r, key), _pareto_sort_value(r, "custom_score"), int(r.get("iteration") or 0)))
+
+
+def best_pareto_yield_row(rows: list[dict]) -> dict | None:
+    candidates = [r for r in rows if r.get("category") != "constraint_record_only"]
+    if not candidates:
+        candidates = list(rows)
+    candidates = [
+        r
+        for r in candidates
+        if _num_or_none(r.get("wheat_yield_error")) is not None and _num_or_none(r.get("maize_yield_error")) is not None
+    ]
+    if not candidates:
+        return None
+    return min(
+        candidates,
+        key=lambda r: (
+            max(_pareto_sort_value(r, "wheat_yield_error"), _pareto_sort_value(r, "maize_yield_error")),
+            _pareto_sort_value(r, "custom_score"),
+            int(r.get("iteration") or 0),
+        ),
+    )
+
+
+def copy_pareto_best_dirs(output_dir: Path, rows: list[dict]) -> None:
+    selections = {
+        "pareto_best_custom": best_pareto_row(rows, "custom_score"),
+        "pareto_best_yield": best_pareto_yield_row(rows),
+        "pareto_best_soil": best_pareto_row(rows, "soil_water_error"),
+        "pareto_best_smooth": best_pareto_row(rows, "soil_water_sawtooth_score"),
+        "pareto_best_water_yield": best_pareto_row(rows, "water_yield_score"),
+    }
+    for dirname, row in selections.items():
+        if not row:
+            continue
+        src = Path(str(row.get("candidate_dir") or ""))
+        if not src.exists():
+            continue
+        dst = output_dir / dirname
+        if dst.exists():
+            shutil.rmtree(dst)
+        shutil.copytree(src, dst)
+        base.write_text(
+            dst / "pareto_selection.json",
+            json.dumps({"category": dirname, "selected_row": row}, ensure_ascii=False, indent=2),
+        )
+
+
+def summarize_irrigation_events(out_dir: Path) -> dict:
+    events = []
+    try:
+        rows = base.parse_phases(Path(out_dir) / "Rotation Sample Phases.out")
+    except Exception:
+        rows = []
+    for row in rows:
+        applied = _num_or_none(row.get("IrrigationApplied"))
+        if applied is None or applied <= 0:
+            continue
+        events.append(
+            {
+                "date": row.get("Date"),
+                "irrigation_applied_mm": applied,
+                "irrigation_total_mm": _num_or_none(row.get("IrrigationTotal")),
+                "crit_fr_asw": _num_or_none(row.get("IrrigationCritFrASW")),
+            }
+        )
+    vals = [float(e["irrigation_applied_mm"]) for e in events]
+    return {
+        "event_count": len(events),
+        "total_irrigation_mm": sum(vals),
+        "max_single_irrigation_mm": max(vals) if vals else 0.0,
+        "mean_single_irrigation_mm": mean_valid(vals),
+        "events": events,
+    }
+
+
+def score_soil_water_sawtooth(rows: list[dict], scenario: str | None = None) -> dict:
+    by_layer = defaultdict(list)
+    for r in rows or []:
+        if scenario is not None and r.get("scenario") != scenario:
+            continue
+        layer = r.get("variable")
+        if layer not in ("water_1", "water_2", "water_3", "water_4", "water_5"):
+            continue
+        sim = _num_or_none(r.get("sim_value"))
+        date_text = r.get("date")
+        if sim is None or not date_text:
+            continue
+        try:
+            date_obj = datetime.strptime(str(date_text)[:10], "%Y-%m-%d")
+        except Exception:
+            continue
+        by_layer[layer].append((date_obj, float(sim)))
+
+    diffs = []
+    layer_scores = {}
+    for layer, vals in sorted(by_layer.items()):
+        vals.sort(key=lambda x: x[0])
+        layer_diffs = [abs(vals[i][1] - vals[i - 1][1]) for i in range(1, len(vals))]
+        diffs.extend(layer_diffs)
+        layer_scores[layer] = {
+            "n_diffs": len(layer_diffs),
+            "mean_abs_daily_jump": mean_valid(layer_diffs),
+            "max_daily_jump": max(layer_diffs) if layer_diffs else None,
+        }
+
+    mean_jump = mean_valid(diffs)
+    max_jump = max(diffs) if diffs else None
+    spike_threshold = 5.0
+    spike_count = sum(1 for d in diffs if d > spike_threshold)
+    score = None
+    if mean_jump is not None:
+        score = mean_jump + 0.15 * (max_jump or 0.0) + 0.05 * spike_count
+    return {
+        "soil_water_sawtooth_score": score,
+        "mean_abs_daily_jump": mean_jump,
+        "max_daily_jump": max_jump,
+        "spike_jump_threshold": spike_threshold,
+        "spike_jump_count": spike_count,
+        "n_diffs": len(diffs),
+        "layers": layer_scores,
+    }
+
+
 def diagnose_soil_water_error(rows: list) -> dict:
     out = {
         "layers": {},
@@ -2755,6 +3145,221 @@ def mutate_auto_irrigation_rule(base_config: dict, soil_diag: dict, yield_diag: 
     }
 
 
+def pick_yield_pareto_irrigation_amount_plan(k: int) -> dict:
+    item = PARETO_IRRIGATION_AMOUNT_GRID[k % len(PARETO_IRRIGATION_AMOUNT_GRID)]
+    return {
+        "action": "irrigation_amount_rule",
+        "action_type": "yield_pareto_irrigation_amount_rule",
+        "irrigation_mode": "threshold_amount_limited",
+        "crit_fr_asw": float(item["crit_fr_asw"]),
+        "asw_depth": float(item["asw_depth"]),
+        "max_single_irrigation_mm": float(item["max_single_irrigation_mm"]),
+        "fixed_date_irrigation_enabled": False,
+        "random_irrigation_enabled": False,
+        "single_amount_control_method": "reduce_asw_depth",
+    }
+
+
+def pick_yield_pareto_irrigation_recovery_plan(k: int) -> dict:
+    item = PARETO_IRRIGATION_RECOVERY_GRID[k % len(PARETO_IRRIGATION_RECOVERY_GRID)]
+    irrigation = {
+        "action": "irrigation_amount_rule",
+        "action_type": "yield_pareto_irrigation_amount_rule",
+        "irrigation_mode": "threshold_amount_limited",
+        "crit_fr_asw": float(item["crit_fr_asw"]),
+        "asw_depth": float(item["asw_depth"]),
+        "max_single_irrigation_mm": float(item["max_single_irrigation_mm"]),
+        "fixed_date_irrigation_enabled": False,
+        "random_irrigation_enabled": False,
+        "single_amount_control_method": "reduce_asw_depth",
+    }
+    return {
+        "action": "irrigation_recovery_combo",
+        "action_type": "yield_pareto_irrigation_recovery_combo",
+        "irrigation": irrigation,
+        "changes": [
+            {
+                "kind": "cultivar",
+                "crop": "wheat",
+                "parameter_name": item["wheat_param"],
+                "sobol_phase": "wheat_yield_component",
+            }
+        ],
+        "forbidden_change_types": [
+            "random_irrigation",
+            "fixed_date_irrigation",
+            "initial_water",
+            "crit_fr_asw_standalone_search",
+        ],
+    }
+
+
+def pick_yield_pareto_irrigation_smoothing_plan(k: int) -> dict:
+    item = PARETO_IRRIGATION_SMOOTHING_GRID[k % len(PARETO_IRRIGATION_SMOOTHING_GRID)]
+    mode = item["mode"]
+    plan = {
+        "action": "irrigation_smoothing_rule",
+        "action_type": f"yield_pareto_irrigation_smoothing_{mode}",
+        "irrigation_mode": mode,
+        "random_irrigation_enabled": False,
+        "primary_target": "reduce_soil_water_sawtooth",
+    }
+    if mode in ("threshold_smoothing", "hybrid_smoothing"):
+        plan.update(
+            {
+                "automatic_irrigation_enabled": True,
+                "fixed_date_irrigation_enabled": mode == "hybrid_smoothing",
+                "crit_fr_asw": float(item["crit_fr_asw"]),
+                "asw_depth": float(item["asw_depth"]),
+                "irrigation_efficiency": float(item["irrigation_efficiency"]),
+                "max_single_irrigation_mm": float(item["max_single_irrigation_mm"]),
+                "smoothing_control_method": (
+                    "auto_fallback_plus_small_fixed_pulses"
+                    if mode == "hybrid_smoothing"
+                    else "lower_threshold_and_shallow_asw_depth"
+                ),
+            }
+        )
+        if mode == "hybrid_smoothing":
+            plan["events"] = [{"date": e["date"], "amount_mm": float(e["amount_mm"])} for e in item["events"]]
+    else:
+        events = [{"date": e["date"], "amount_mm": float(e["amount_mm"])} for e in item["events"]]
+        plan.update(
+            {
+                "automatic_irrigation_enabled": False,
+                "fixed_date_irrigation_enabled": True,
+                "events": events,
+                "irrigation_efficiency": float(item["irrigation_efficiency"]),
+                "max_single_irrigation_mm": max(e["amount_mm"] for e in events) if events else 0.0,
+                "smoothing_control_method": "small_fixed_date_pulses",
+            }
+        )
+    return plan
+
+
+def mutate_irrigation_amount_rule(base_config: dict, plan: dict) -> tuple[dict, dict]:
+    cfg = copy.deepcopy(base_config)
+    old_thr = float(cfg.get("crit_fr_asw") or 0.56)
+    old_depth = float(cfg.get("asw_depth") or 800.0)
+    old_eff = float(cfg.get("irrigation_efficiency") or 0.85)
+    new_thr = float(plan["crit_fr_asw"])
+    new_depth = float(plan["asw_depth"])
+    max_single = float(plan["max_single_irrigation_mm"])
+    cfg["mode"] = "threshold_amount_limited"
+    cfg["automatic_irrigation"] = "on"
+    cfg["fixed_enabled"] = "no"
+    cfg["events"] = []
+    cfg["crit_fr_asw"] = new_thr
+    cfg["asw_depth"] = new_depth
+    cfg["irrigation_efficiency"] = old_eff
+    cfg["threshold"] = {
+        "layer": "asw_depth",
+        "trigger_below": new_thr,
+        "amount_mm": None,
+        "asw_depth": new_depth,
+        "irrigation_efficiency": old_eff,
+        "max_single_irrigation_mm_target": max_single,
+    }
+    return cfg, {
+        "mode": "threshold_amount_limited",
+        "reason": "降低自动灌溉触发阈值和 ASW 计算深度；ASW 深度是 APSIM 自动灌溉单次补水量的直接控制代理。",
+        "old_config": base_config,
+        "new_config": cfg,
+        "changed_fields": {
+            "crit_fr_asw": {"from": old_thr, "to": new_thr},
+            "asw_depth": {"from": old_depth, "to": new_depth},
+            "irrigation_efficiency": {"from": old_eff, "to": old_eff},
+        },
+        "single_amount_control": {
+            "method": "reduce_asw_depth",
+            "target_max_single_irrigation_mm": max_single,
+            "note": "Classic APSIM automatic irrigation has no explicit per-event cap in this template; reducing asw_depth reduces the refill deficit per trigger.",
+        },
+        "total_irrigation_mm_before": total_irrigation_mm(base_config),
+        "total_irrigation_mm_after": 0.0,
+        "random_irrigation_disabled": True,
+        "fixed_date_irrigation_disabled": True,
+    }
+
+
+def mutate_irrigation_smoothing_rule(base_config: dict, plan: dict) -> tuple[dict, dict]:
+    cfg = copy.deepcopy(base_config)
+    old_thr = float(cfg.get("crit_fr_asw") or 0.56)
+    old_depth = float(cfg.get("asw_depth") or 800.0)
+    old_eff = float(cfg.get("irrigation_efficiency") or 0.85)
+    mode = str(plan.get("irrigation_mode") or "threshold_smoothing")
+    if mode == "hybrid_smoothing":
+        events = [{"date": str(e["date"]), "amount_mm": float(e["amount_mm"])} for e in plan.get("events", [])]
+        new_thr = float(plan["crit_fr_asw"])
+        new_depth = float(plan["asw_depth"])
+        cfg["mode"] = "hybrid_smoothing"
+        cfg["automatic_irrigation"] = "on"
+        cfg["fixed_enabled"] = "yes"
+        cfg["events"] = events
+        cfg["crit_fr_asw"] = new_thr
+        cfg["asw_depth"] = new_depth
+        cfg["irrigation_efficiency"] = float(plan.get("irrigation_efficiency", old_eff))
+        cfg["threshold"] = {
+            "layer": "asw_depth",
+            "trigger_below": new_thr,
+            "amount_mm": None,
+            "asw_depth": new_depth,
+            "irrigation_efficiency": cfg["irrigation_efficiency"],
+            "max_single_irrigation_mm_target": float(plan.get("max_single_irrigation_mm", 0.0)),
+        }
+        method = "auto_fallback_plus_small_fixed_pulses"
+        reason = "保留自动灌溉兜底，同时加入小剂量固定日期补水来提前补谷、削弱后续自动灌溉尖峰。"
+    elif mode == "fixed_dates_smoothing":
+        events = [{"date": str(e["date"]), "amount_mm": float(e["amount_mm"])} for e in plan.get("events", [])]
+        cfg["mode"] = "fixed_dates_smoothing"
+        cfg["automatic_irrigation"] = "off"
+        cfg["fixed_enabled"] = "yes"
+        cfg["events"] = events
+        cfg["irrigation_efficiency"] = float(plan.get("irrigation_efficiency", old_eff))
+        method = "small_fixed_date_pulses"
+        reason = "关闭自动灌溉，改用多次小剂量固定日期灌溉，避免一次性补水造成 soil_water 尖峰。"
+    else:
+        new_thr = float(plan["crit_fr_asw"])
+        new_depth = float(plan["asw_depth"])
+        cfg["mode"] = "threshold_smoothing"
+        cfg["automatic_irrigation"] = "on"
+        cfg["fixed_enabled"] = "no"
+        cfg["events"] = []
+        cfg["crit_fr_asw"] = new_thr
+        cfg["asw_depth"] = new_depth
+        cfg["irrigation_efficiency"] = float(plan.get("irrigation_efficiency", old_eff))
+        cfg["threshold"] = {
+            "layer": "asw_depth",
+            "trigger_below": new_thr,
+            "amount_mm": None,
+            "asw_depth": new_depth,
+            "irrigation_efficiency": cfg["irrigation_efficiency"],
+            "max_single_irrigation_mm_target": float(plan.get("max_single_irrigation_mm", 0.0)),
+        }
+        method = "lower_threshold_and_shallow_asw_depth"
+        reason = "保持自动灌溉，但降低触发阈值并缩浅 ASW 计算深度，让每次补水幅度更小。"
+    return cfg, {
+        "mode": mode,
+        "reason": reason,
+        "old_config": base_config,
+        "new_config": cfg,
+        "changed_fields": {
+            "crit_fr_asw": {"from": old_thr, "to": cfg.get("crit_fr_asw")},
+            "asw_depth": {"from": old_depth, "to": cfg.get("asw_depth")},
+            "irrigation_efficiency": {"from": old_eff, "to": cfg.get("irrigation_efficiency")},
+        },
+        "smoothing_control": {
+            "method": method,
+            "target_max_single_irrigation_mm": float(plan.get("max_single_irrigation_mm", 0.0)),
+            "events": cfg.get("events", []),
+        },
+        "total_irrigation_mm_before": total_irrigation_mm(base_config),
+        "total_irrigation_mm_after": total_irrigation_mm(cfg),
+        "random_irrigation_disabled": True,
+        "fixed_date_irrigation_enabled": mode == "fixed_dates_smoothing",
+    }
+
+
 def _extract_tag(block: str, tag: str, default=None):
     m = re.search(rf"<{re.escape(tag)}[^>]*>(.*?)</{re.escape(tag)}>", block, re.S)
     if not m:
@@ -3117,6 +3722,97 @@ def pick_action_hdsw_water_yield(k: int, baseline_eval: dict, baseline_water: di
     return water_cycle[k % len(water_cycle)] if water_cycle else {"action": "initial_water", "action_type": "initial_water"}
 
 
+def _is_pareto_system_candidate(row: dict) -> bool:
+    text = " ".join(str(row.get(k, "")) for k in ("parameter_key", "parameter_name", "crop", "xml_path")).lower()
+    return any(pattern in text for pattern in PARETO_SYSTEM_NAME_PATTERNS)
+
+
+def pick_yield_pareto_local_plan(k: int) -> dict:
+    """Deterministic constrained local combo plan; irrigation management is intentionally absent."""
+    maize_param = PARETO_MAIZE_PARAMS[k % len(PARETO_MAIZE_PARAMS)]
+    wheat_param = PARETO_WHEAT_PARAMS[(k // len(PARETO_MAIZE_PARAMS)) % len(PARETO_WHEAT_PARAMS)]
+    system_candidates = [r for r in (ACTIVE_SYSTEM_SOBOL_PRIORITY or []) if _is_pareto_system_candidate(r)]
+    changes = [
+        {
+            "kind": "cultivar",
+            "crop": "maize",
+            "parameter_name": maize_param,
+            "sobol_phase": "maize_yield_component" if maize_param != "rue" else "biomass_canopy",
+        },
+        {
+            "kind": "cultivar",
+            "crop": "wheat",
+            "parameter_name": wheat_param,
+            "sobol_phase": "wheat_yield_component" if wheat_param != "rue" else "biomass_canopy",
+        },
+    ]
+    if system_candidates:
+        row = system_candidates[k % len(system_candidates)]
+        changes.append(
+            {
+                "kind": "system_sobol",
+                "parameter_key": row.get("parameter_key"),
+                "parameter_name": row.get("parameter_name"),
+                "sobol_ST": row.get("ST"),
+            }
+        )
+    return {
+        "action": "pareto_combo",
+        "action_type": "yield_pareto_local_combo",
+        "changes": changes,
+        "forbidden_change_types": [
+            "random_irrigation",
+            "fixed_date_irrigation",
+            "auto_irrigation_rule",
+        ],
+    }
+
+
+def choose_pareto_system_row(k: int, truth_text: str, scratch_path: Path, requested_key: str | None = None) -> dict | None:
+    parameter_rows = system_parameter_rows_from_truth_text(truth_text, scratch_path)
+    candidates = []
+    for sobol_row in ACTIVE_SYSTEM_SOBOL_PRIORITY or []:
+        key = str(sobol_row.get("parameter_key", "")).strip()
+        if requested_key and key != requested_key:
+            continue
+        param_row = parameter_rows.get(key)
+        if not param_row or not _is_pareto_system_candidate({**param_row, **sobol_row}):
+            continue
+        item = dict(param_row)
+        item.update({f"sobol_{k2}": v for k2, v in sobol_row.items()})
+        item["ST"] = sobol_row.get("ST")
+        item["target_variable"] = sobol_row.get("target_variable")
+        candidates.append(item)
+    if not candidates and requested_key:
+        return choose_pareto_system_row(k, truth_text, scratch_path, requested_key=None)
+    if not candidates:
+        return None
+    candidates.sort(key=lambda r: float(r.get("ST") or 0.0), reverse=True)
+    return candidates[k % len(candidates)]
+
+
+def changed_parameters_from_manifest(cultivar_changes: list, non_cultivar_changes: list) -> dict:
+    changed = {}
+    for item in cultivar_changes or []:
+        crop = item.get("crop")
+        for name, diff in (item.get("changed_params") or {}).items():
+            changed[f"{crop}.{name}"] = diff
+    for item in non_cultivar_changes or []:
+        key = item.get("parameter_key") or item.get("parameter_name") or item.get("factor")
+        if key:
+            if item.get("changed_fields"):
+                for field, diff in (item.get("changed_fields") or {}).items():
+                    changed[f"{key}.{field}"] = diff
+            else:
+                changed[f"system.{key}"] = {
+                    "from": item.get("from"),
+                    "to": item.get("to"),
+                    "direction": item.get("direction"),
+                    "sobol_ST": item.get("sobol_ST"),
+                }
+    return changed
+
+
 def write_water_yield_stage_alignment(path: Path, plan: dict, irrigation_meta: dict, sobol_meta: dict, metrics: dict, accepted: bool, decision: dict) -> None:
     bw = metrics.get("baseline_hdsw_water_yield", metrics.get("baseline_water_yield", {}))
     cw = metrics.get("candidate_hdsw_water_yield", metrics.get("candidate_water_yield", {}))
@@ -3243,7 +3939,18 @@ def parse_args():
         "--action_mode",
         type=str,
         default="mixed",
-        choices=["mixed", "wheat_focus", "conservative", "sobol_phased", "water_yield_search", "hdsw_water_yield_search"],
+        choices=[
+            "mixed",
+            "wheat_focus",
+            "conservative",
+            "sobol_phased",
+            "water_yield_search",
+            "hdsw_water_yield_search",
+            "yield_pareto_local_search",
+            "yield_pareto_irrigation_amount_search",
+            "yield_pareto_irrigation_recovery_search",
+            "yield_pareto_irrigation_smoothing_search",
+        ],
         help="mixed: joint search; wheat_focus: freeze maize and only adjust wheat variables; conservative: wheat_focus + occasional soil-only",
     )
     p.add_argument("--soil_base", type=str, default="HDSW", choices=["HDSW", "current"], help="hdsw_water_yield_search 的 soil 基础。")
@@ -3368,6 +4075,50 @@ def main():
         args.max_params_per_iter = max(1, min(2, int(args.max_params_per_iter)))
     if args.action_mode == "hdsw_water_yield_search":
         args.soil_base = "HDSW"
+    if args.action_mode == "yield_pareto_local_search":
+        args.allow_irrigation_change = False
+        args.allow_random_irrigation_change = False
+        args.allow_auto_irrigation_rule_change = False
+        args.allow_initial_water_change = False
+        args.allow_crit_fr_asw_change = False
+        args.allow_system_sobol_combo = False
+        args.allow_system_sobol_change = True
+        args.allow_cultivar_change = True
+        args.irrigation_mode = "threshold"
+        args.target_yield_rel = min(float(args.target_yield_rel), 0.12)
+    if args.action_mode == "yield_pareto_irrigation_amount_search":
+        args.allow_irrigation_change = False
+        args.allow_random_irrigation_change = False
+        args.allow_auto_irrigation_rule_change = True
+        args.allow_initial_water_change = False
+        args.allow_crit_fr_asw_change = False
+        args.allow_system_sobol_combo = False
+        args.allow_system_sobol_change = False
+        args.allow_cultivar_change = False
+        args.irrigation_mode = "threshold"
+        args.target_yield_rel = min(float(args.target_yield_rel), 0.12)
+    if args.action_mode == "yield_pareto_irrigation_recovery_search":
+        args.allow_irrigation_change = False
+        args.allow_random_irrigation_change = False
+        args.allow_auto_irrigation_rule_change = True
+        args.allow_initial_water_change = False
+        args.allow_crit_fr_asw_change = False
+        args.allow_system_sobol_combo = False
+        args.allow_system_sobol_change = False
+        args.allow_cultivar_change = True
+        args.irrigation_mode = "threshold"
+        args.target_yield_rel = min(float(args.target_yield_rel), 0.12)
+    if args.action_mode == "yield_pareto_irrigation_smoothing_search":
+        args.allow_irrigation_change = False
+        args.allow_random_irrigation_change = False
+        args.allow_auto_irrigation_rule_change = True
+        args.allow_initial_water_change = False
+        args.allow_crit_fr_asw_change = False
+        args.allow_system_sobol_combo = False
+        args.allow_system_sobol_change = False
+        args.allow_cultivar_change = False
+        args.irrigation_mode = "mixed"
+        args.target_yield_rel = min(float(args.target_yield_rel), 0.12)
     PROCESS_BIO.mkdir(parents=True, exist_ok=True)
     BEST_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -3389,7 +4140,20 @@ def main():
     # HDSW Soil block below.  This keeps the new experiment independent while
     # preserving the requested cultivar starting point.
     seed_dir = None
-    if (BEST_DIR / "truth.apsim").exists():
+    if (
+        args.action_mode in (
+            "yield_pareto_local_search",
+            "yield_pareto_irrigation_amount_search",
+            "yield_pareto_irrigation_recovery_search",
+            "yield_pareto_irrigation_smoothing_search",
+        )
+        and args.truth_template
+        and Path(args.truth_template).name.lower() == "truth.apsim"
+        and (Path(args.truth_template).parent / "Wheat.xml").exists()
+        and (Path(args.truth_template).parent / "Maize.xml").exists()
+    ):
+        seed_dir = Path(args.truth_template).parent
+    elif (BEST_DIR / "truth.apsim").exists():
         seed_dir = BEST_DIR
     elif args.action_mode == "hdsw_water_yield_search" and (DEFAULT_HDSW_SEED_DIR / "truth.apsim").exists():
         seed_dir = DEFAULT_HDSW_SEED_DIR
@@ -3446,6 +4210,7 @@ def main():
     found_success = False
     no_water_improve_count = 0
     best_water_soil = None
+    pareto_rows = []
     if args.action_mode in ("water_yield_search", "hdsw_water_yield_search") and (BEST_DIR / "metrics.json").exists():
         try:
             prev_best_metrics = json.loads((BEST_DIR / "metrics.json").read_text(encoding="utf-8"))
@@ -3568,6 +4333,18 @@ def main():
                     "parameter_group": group,
                     "diagnosis": diagnosis,
                 }
+        elif args.action_mode == "yield_pareto_local_search":
+            water_plan = pick_yield_pareto_local_plan(k)
+            action = water_plan["action"]
+        elif args.action_mode == "yield_pareto_irrigation_amount_search":
+            water_plan = pick_yield_pareto_irrigation_amount_plan(k)
+            action = water_plan["action"]
+        elif args.action_mode == "yield_pareto_irrigation_recovery_search":
+            water_plan = pick_yield_pareto_irrigation_recovery_plan(k)
+            action = water_plan["action"]
+        elif args.action_mode == "yield_pareto_irrigation_smoothing_search":
+            water_plan = pick_yield_pareto_irrigation_smoothing_plan(k)
+            action = water_plan["action"]
         else:
             action = pick_action(k, baseline_eval, args.action_mode)
             if args.cultivar_only and action not in ("wheat_cultivar", "maize_cultivar"):
@@ -3580,7 +4357,109 @@ def main():
         scope = "cultivar_only"
         non_cultivar_changed = False
 
-        if action == "wheat_cultivar":
+        if action == "pareto_combo":
+            scope = "yield_pareto_local_combo"
+            diagnosis = build_sobol_diagnosis(baseline_eval, baseline_rows_for_diag)
+            pareto_sobol_metas = []
+            for change in (water_plan or {}).get("changes", []):
+                if change.get("kind") != "cultivar":
+                    continue
+                crop = change.get("crop")
+                param_name = change.get("parameter_name")
+                diag = dict(diagnosis)
+                diag["sobol_phase"] = change.get("sobol_phase")
+                if crop == "wheat":
+                    p0 = base.parse_wheat_params(wheat_before, current_best_wheat)
+                    if param_name not in p0:
+                        continue
+                    p1, meta = mutate_wheat_sobol_param(
+                        p0,
+                        param_name,
+                        diag,
+                        min(float(args.wheat_step_scale), 0.08),
+                        20260424 + iter_no,
+                    )
+                    name = base.next_wheat_name(wheat_after, iter_no)
+                    wheat_after = base.append_wheat_cultivar(wheat_after, name, p1, current_best_wheat)
+                    truth_after = base.set_manager_cultivar(truth_after, "Wheat Management", name)
+                    cultivar_changes.append(
+                        {
+                            "crop": "wheat",
+                            "new_cultivar": name,
+                            "derived_from": current_best_wheat,
+                            "changed_params": {
+                                meta["parameter_name"]: {
+                                    "from": meta["old_value"],
+                                    "to": meta["new_value"],
+                                }
+                            },
+                        }
+                    )
+                    pareto_sobol_metas.append(meta)
+                elif crop == "maize":
+                    p0 = base.parse_maize_params(maize_before, current_best_maize)
+                    if param_name not in p0:
+                        continue
+                    p1, meta = mutate_maize_sobol_param(
+                        p0,
+                        param_name,
+                        diag,
+                        min(float(args.maize_step_scale), 0.08),
+                        20260424 + iter_no,
+                    )
+                    name = base.next_maize_name(maize_after, iter_no)
+                    maize_after = base.append_maize_cultivar(maize_after, name, p1)
+                    truth_after = base.set_manager_cultivar(truth_after, "Maize Management", name)
+                    cultivar_changes.append(
+                        {
+                            "crop": "maize",
+                            "new_cultivar": name,
+                            "derived_from": current_best_maize,
+                            "changed_params": {
+                                meta["parameter_name"]: {
+                                    "from": meta["old_value"],
+                                    "to": meta["new_value"],
+                                }
+                            },
+                        }
+                    )
+                    pareto_sobol_metas.append(meta)
+            for change in (water_plan or {}).get("changes", []):
+                if change.get("kind") != "system_sobol":
+                    continue
+                system_row = choose_pareto_system_row(
+                    k,
+                    truth_before,
+                    iter_dir / "pareto_system_sobol_probe.apsim",
+                    requested_key=change.get("parameter_key"),
+                )
+                if system_row is None:
+                    continue
+                non_cultivar_changed = True
+                system_sobol_changed = True
+                direction, direction_reason = system_sobol_direction(system_row, soil_water_diagnosis, yield_diagnosis, k)
+                truth_after, system_sobol_meta = apply_system_sobol_adjustment(
+                    truth_after,
+                    system_row,
+                    direction=direction,
+                    step_scale=min(float(args.system_step_scale), 0.03),
+                )
+                system_sobol_meta["direction_reason"] = direction_reason
+                non_cultivar_changes.append(
+                    {
+                        "factor": "system_sobol",
+                        "parameter_key": system_sobol_meta.get("parameter_key"),
+                        "parameter_name": system_sobol_meta.get("parameter_name"),
+                        "from": system_sobol_meta.get("old_value"),
+                        "to": system_sobol_meta.get("new_value"),
+                        "direction": system_sobol_meta.get("direction"),
+                        "sobol_ST": system_sobol_meta.get("sobol_ST"),
+                        "reason": direction_reason,
+                    }
+                )
+            sobol_meta = pareto_sobol_metas[0] if pareto_sobol_metas else {}
+            non_cultivar_changed = non_cultivar_changed or bool(non_cultivar_changes)
+        elif action == "wheat_cultivar":
             p0 = base.parse_wheat_params(wheat_before, current_best_wheat)
             if sobol_plan and sobol_plan.get("crop") == "wheat":
                 p1, sobol_meta = mutate_wheat_sobol_param(
@@ -3698,6 +4577,87 @@ def main():
                     "factor": "auto_irrigation_rule",
                     "changed_fields": auto_irrigation_rule_meta.get("changed_fields"),
                     "reason": auto_irrigation_rule_meta.get("reason"),
+                }
+            )
+        elif action == "irrigation_amount_rule":
+            scope = "irrigation_amount_rule"
+            non_cultivar_changed = True
+            irrigation_changed = True
+            old_cfg = parse_irrigation_config(truth_before)
+            new_cfg, irrigation_meta = mutate_irrigation_amount_rule(old_cfg, water_plan or {})
+            truth_after = set_irrigation_config(truth_after, new_cfg)
+            non_cultivar_changes.append(
+                {
+                    "factor": "Irrigation.threshold_amount_limited",
+                    "mode": irrigation_meta.get("mode"),
+                    "changed_fields": irrigation_meta.get("changed_fields"),
+                    "single_amount_control": irrigation_meta.get("single_amount_control"),
+                    "reason": irrigation_meta.get("reason"),
+                }
+            )
+        elif action == "irrigation_recovery_combo":
+            scope = "irrigation_recovery_combo"
+            non_cultivar_changed = True
+            irrigation_changed = True
+            old_cfg = parse_irrigation_config(truth_before)
+            new_cfg, irrigation_meta = mutate_irrigation_amount_rule(old_cfg, (water_plan or {}).get("irrigation") or {})
+            truth_after = set_irrigation_config(truth_after, new_cfg)
+            non_cultivar_changes.append(
+                {
+                    "factor": "Irrigation.threshold_amount_limited",
+                    "mode": irrigation_meta.get("mode"),
+                    "changed_fields": irrigation_meta.get("changed_fields"),
+                    "single_amount_control": irrigation_meta.get("single_amount_control"),
+                    "reason": irrigation_meta.get("reason"),
+                }
+            )
+            diagnosis = build_sobol_diagnosis(baseline_eval, baseline_rows_for_diag)
+            for change in (water_plan or {}).get("changes", []):
+                if change.get("kind") != "cultivar" or change.get("crop") != "wheat":
+                    continue
+                param_name = change.get("parameter_name")
+                p0 = base.parse_wheat_params(wheat_before, current_best_wheat)
+                if param_name not in p0:
+                    continue
+                diag = dict(diagnosis)
+                diag["sobol_phase"] = change.get("sobol_phase", "wheat_yield_component")
+                p1, sobol_meta = mutate_wheat_sobol_param(
+                    p0,
+                    param_name,
+                    diag,
+                    min(float(args.wheat_step_scale), 0.08),
+                    20260424 + iter_no,
+                )
+                name = base.next_wheat_name(wheat_after, iter_no)
+                wheat_after = base.append_wheat_cultivar(wheat_after, name, p1, current_best_wheat)
+                truth_after = base.set_manager_cultivar(truth_after, "Wheat Management", name)
+                cultivar_changes.append(
+                    {
+                        "crop": "wheat",
+                        "new_cultivar": name,
+                        "derived_from": current_best_wheat,
+                        "changed_params": {
+                            sobol_meta["parameter_name"]: {
+                                "from": sobol_meta["old_value"],
+                                "to": sobol_meta["new_value"],
+                            }
+                        },
+                    }
+                )
+        elif action == "irrigation_smoothing_rule":
+            scope = "irrigation_smoothing_rule"
+            non_cultivar_changed = True
+            irrigation_changed = True
+            old_cfg = parse_irrigation_config(truth_before)
+            new_cfg, irrigation_meta = mutate_irrigation_smoothing_rule(old_cfg, water_plan or {})
+            truth_after = set_irrigation_config(truth_after, new_cfg)
+            non_cultivar_changes.append(
+                {
+                    "factor": "Irrigation.smoothing",
+                    "mode": irrigation_meta.get("mode"),
+                    "changed_fields": irrigation_meta.get("changed_fields"),
+                    "smoothing_control": irrigation_meta.get("smoothing_control"),
+                    "reason": irrigation_meta.get("reason"),
                 }
             )
         elif action in ("irrigation_fixed_dates", "irrigation_threshold", "irrigation_seeded_random"):
@@ -3894,6 +4854,8 @@ def main():
         candidate_anchor = extract_wheat_anchor_metrics(out_cand, truth_obj, args.wheat_late_stage_cn)
         baseline_rows = baseline_rows_for_diag
         candidate_rows = collect_prediction_vs_truth_rows(out_cand, truth_obj, "candidate")
+        baseline_irrigation_stats = summarize_irrigation_events(out_base)
+        candidate_irrigation_stats = summarize_irrigation_events(out_cand)
 
         metrics = build_metrics(
             iter_no,
@@ -3914,6 +4876,8 @@ def main():
             enable_legacy_wheat_anchor_bonus=args.enable_legacy_wheat_anchor_bonus,
         )
         scored_rows = metrics.pop("_scored_rows", {"baseline": baseline_rows, "candidate": candidate_rows})
+        metrics["baseline_irrigation_stats"] = baseline_irrigation_stats
+        metrics["candidate_irrigation_stats"] = candidate_irrigation_stats
         b_custom = metrics["baseline_custom"]
         c_custom = metrics["candidate_custom"]
 
@@ -3957,6 +4921,39 @@ def main():
         else:
             better = metrics["comparison"]["is_better_than_baseline"] and pheno_ok
             metrics["comparison"]["is_better_than_baseline"] = better
+        if args.action_mode == "yield_pareto_local_search":
+            metrics["baseline_water_yield"] = score_water_yield_objective(baseline_eval, b_custom, args)
+            metrics["candidate_water_yield"] = score_water_yield_objective(candidate_eval, c_custom, args)
+            metrics["comparison"]["is_better_than_baseline"] = False
+            metrics["comparison"]["pareto_candidate_recorded"] = True
+            better = False
+        if args.action_mode in (
+            "yield_pareto_irrigation_amount_search",
+            "yield_pareto_irrigation_recovery_search",
+            "yield_pareto_irrigation_smoothing_search",
+        ):
+            metrics["baseline_water_yield"] = score_water_yield_objective(baseline_eval, b_custom, args)
+            metrics["candidate_water_yield"] = score_water_yield_objective(candidate_eval, c_custom, args)
+            metrics["baseline_soil_water_sawtooth"] = score_soil_water_sawtooth(baseline_rows)
+            metrics["candidate_soil_water_sawtooth"] = score_soil_water_sawtooth(candidate_rows)
+            metrics["comparison"]["is_better_than_baseline"] = False
+            metrics["comparison"]["pareto_candidate_recorded"] = True
+            metrics["comparison"]["irrigation_total_delta_mm"] = (
+                metrics["candidate_irrigation_stats"].get("total_irrigation_mm", 0.0)
+                - metrics["baseline_irrigation_stats"].get("total_irrigation_mm", 0.0)
+            )
+            metrics["comparison"]["max_single_irrigation_delta_mm"] = (
+                metrics["candidate_irrigation_stats"].get("max_single_irrigation_mm", 0.0)
+                - metrics["baseline_irrigation_stats"].get("max_single_irrigation_mm", 0.0)
+            )
+            metrics["comparison"]["soil_water_sawtooth_delta"] = (
+                _num_or_none(metrics["candidate_soil_water_sawtooth"].get("soil_water_sawtooth_score"))
+                - _num_or_none(metrics["baseline_soil_water_sawtooth"].get("soil_water_sawtooth_score"))
+                if _num_or_none(metrics["candidate_soil_water_sawtooth"].get("soil_water_sawtooth_score")) is not None
+                and _num_or_none(metrics["baseline_soil_water_sawtooth"].get("soil_water_sawtooth_score")) is not None
+                else None
+            )
+            better = False
 
         base_locked = ["weather", "rotation", "sowing_window", "irrigation", "residue", "tillage"]
         if scope == "cultivar_only":
@@ -3967,6 +4964,49 @@ def main():
             locked = ["weather", "rotation", "sowing_window", "residue", "tillage", "soil", "fertilizer", "wheat_cultivar", "maize_cultivar"]
         elif scope == "auto_irrigation_rule":
             locked = ["weather", "rotation", "sowing_window", "residue", "tillage", "soil", "fertilizer", "wheat_cultivar", "maize_cultivar"]
+        elif scope == "irrigation_amount_rule":
+            locked = [
+                "weather",
+                "rotation",
+                "sowing_window",
+                "random_irrigation",
+                "fixed_date_irrigation",
+                "initial_water",
+                "crit_fr_asw_standalone_search",
+                "fertilizer",
+                "soil_physical_properties",
+                "wheat_cultivar",
+                "maize_cultivar",
+                "system_water_parameters",
+            ]
+        elif scope == "irrigation_recovery_combo":
+            locked = [
+                "weather",
+                "rotation",
+                "sowing_window",
+                "random_irrigation",
+                "fixed_date_irrigation",
+                "initial_water",
+                "crit_fr_asw_standalone_search",
+                "fertilizer",
+                "soil_physical_properties",
+                "maize_cultivar",
+                "system_water_parameters",
+            ]
+        elif scope == "irrigation_smoothing_rule":
+            locked = [
+                "weather",
+                "rotation",
+                "sowing_window",
+                "random_irrigation",
+                "initial_water",
+                "crit_fr_asw_standalone_search",
+                "fertilizer",
+                "soil_physical_properties",
+                "wheat_cultivar",
+                "maize_cultivar",
+                "system_water_parameters",
+            ]
         elif scope == "initial_water_only":
             locked = ["weather", "rotation", "sowing_window", "irrigation", "residue", "tillage", "soil_physical_properties", "fertilizer", "wheat_cultivar", "maize_cultivar"]
         elif scope == "crit_fr_asw_only":
@@ -3975,6 +5015,21 @@ def main():
             locked = ["weather", "rotation", "sowing_window", "irrigation", "residue", "tillage", "fertilizer", "wheat_cultivar", "maize_cultivar"]
         elif scope == "system_sobol_combo":
             locked = ["weather", "rotation", "sowing_window", "residue", "tillage", "fertilizer", "wheat_cultivar", "maize_cultivar"]
+        elif scope == "yield_pareto_local_combo":
+            locked = [
+                "weather",
+                "rotation",
+                "sowing_window",
+                "irrigation_management",
+                "random_irrigation",
+                "fixed_date_irrigation",
+                "auto_irrigation_rule",
+                "initial_water",
+                "crit_fr_asw",
+                "fertilizer",
+                "residue",
+                "tillage",
+            ]
         elif scope == "soil_only":
             locked = base_locked + ["fertilizer", "wheat_cultivar", "maize_cultivar"]
         elif scope == "sowing_only":
@@ -4141,6 +5196,136 @@ def main():
                     "risk": "HDSW soil 的水分库与原品种/灌溉组合可能不匹配；candidate 不满足 yield/phenology 或水分目标会自动回退。",
                 }
             )
+        if args.action_mode == "yield_pareto_local_search":
+            cand_wy = metrics.get("candidate_water_yield", {})
+            manifest.update(
+                {
+                    "optimization_mode": "yield_pareto_local_search",
+                    "primary_target": "record constrained local Pareto candidates around current best",
+                    "hard_constraints_for_priority": {
+                        "wheat_yield_error_max": args.target_yield_rel,
+                        "maize_yield_error_max": args.target_yield_rel,
+                        "phenology_error_days_max": args.pheno_guard_days,
+                    },
+                    "allowed_change_types": [
+                        "maize_cultivar_parameters",
+                        "wheat_cultivar_parameters",
+                        "system_water_parameters_from_sobol",
+                    ],
+                    "forbidden_change_types": [
+                        "random_irrigation",
+                        "fixed_date_irrigation",
+                        "auto_irrigation_rule",
+                        "initial_water",
+                        "crit_fr_asw",
+                        "weather",
+                        "fertilizer",
+                        "sowing_density",
+                        "rotation",
+                        "tillage",
+                        "residue",
+                        "observations",
+                    ],
+                    "action_type": (water_plan or {}).get("action_type", action),
+                    "pareto_plan": water_plan or {},
+                    "changed_parameters": changed_parameters_from_manifest(cultivar_changes, non_cultivar_changes),
+                    "candidate_scores": {
+                        "custom_score": c_custom.get("custom_score"),
+                        "water_yield_score": cand_wy.get("water_yield_score"),
+                        "soil_water_error": cand_wy.get("soil_water_error"),
+                        "wheat_yield_error": cand_wy.get("wheat_yield_error"),
+                        "maize_yield_error": cand_wy.get("maize_yield_error"),
+                        "total_biomass_error": cand_wy.get("total_biomass_error"),
+                        "structure_error": cand_wy.get("structure_error"),
+                        "phenology_error_days_max": cand_wy.get("phenology_error_days_max"),
+                        "yield_constraint_passed": cand_wy.get("yield_constraint_passed"),
+                        "phenology_passed": cand_wy.get("phenology_passed"),
+                    },
+                    "acceptance_decision": {
+                        "accepted_as_greedy_best": False,
+                        "reason": "Pareto local search records candidates and ranks after evaluation instead of greedily replacing the baseline.",
+                    },
+                    "reason": "基于 Sobol 重点参数围绕当前 best 做小范围组合搜索，并记录 Pareto 候选池。",
+                    "expected_effect": "同时观察产量、土壤水分、结构/生物量和物候约束之间的折中方向。",
+                    "risk": "部分候选可能 yield 或 phenology 超限；这些候选会保留记录但不会优先进入 Pareto feasible 类别。",
+                }
+            )
+        if args.action_mode in (
+            "yield_pareto_irrigation_amount_search",
+            "yield_pareto_irrigation_recovery_search",
+            "yield_pareto_irrigation_smoothing_search",
+        ):
+            cand_wy = metrics.get("candidate_water_yield", {})
+            smoothing_mode = args.action_mode == "yield_pareto_irrigation_smoothing_search"
+            manifest.update(
+                {
+                    "optimization_mode": args.action_mode,
+                    "primary_target": (
+                        "reduce automatic irrigation event amount while recovering yield with wheat cultivar parameters"
+                        if args.action_mode == "yield_pareto_irrigation_recovery_search"
+                        else (
+                            "reduce soil-water curve sawtooth by replacing large recharge jumps with gentler automatic or fixed-date irrigation"
+                            if smoothing_mode
+                            else "reduce automatic irrigation event amount while preserving yield and phenology constraints"
+                        )
+                    ),
+                    "hard_constraints_for_priority": {
+                        "wheat_yield_error_max": args.target_yield_rel,
+                        "maize_yield_error_max": args.target_yield_rel,
+                        "phenology_error_days_max": args.pheno_guard_days,
+                    },
+                    "allowed_change_types": [
+                        "automatic_irrigation_crit_fr_asw",
+                        "automatic_irrigation_asw_depth",
+                        "small_fixed_date_irrigation" if smoothing_mode else "automatic_irrigation_efficiency",
+                    ] + (["wheat_cultivar_parameters"] if args.action_mode == "yield_pareto_irrigation_recovery_search" else []),
+                    "forbidden_change_types": [
+                        "random_irrigation",
+                        "large_fixed_date_irrigation" if smoothing_mode else "fixed_date_irrigation",
+                        "initial_water",
+                        "crit_fr_asw_standalone_search",
+                        "weather",
+                        "fertilizer",
+                        "sowing_density",
+                        "cultivar_parameters" if args.action_mode != "yield_pareto_irrigation_recovery_search" else "maize_cultivar_parameters",
+                        "system_water_parameters",
+                        "rotation",
+                        "tillage",
+                        "residue",
+                        "observations",
+                    ],
+                    "action_type": (water_plan or {}).get("action_type", action),
+                    "irrigation_amount_plan": (water_plan or {}).get("irrigation", water_plan or {}),
+                    "yield_recovery_plan": (water_plan or {}).get("changes", []),
+                    "changed_parameters": changed_parameters_from_manifest(cultivar_changes, non_cultivar_changes),
+                    "irrigation_change": irrigation_meta,
+                    "baseline_irrigation_stats": metrics.get("baseline_irrigation_stats"),
+                    "candidate_irrigation_stats": metrics.get("candidate_irrigation_stats"),
+                    "baseline_soil_water_sawtooth": metrics.get("baseline_soil_water_sawtooth"),
+                    "candidate_soil_water_sawtooth": metrics.get("candidate_soil_water_sawtooth"),
+                    "candidate_scores": {
+                        "custom_score": c_custom.get("custom_score"),
+                        "water_yield_score": cand_wy.get("water_yield_score"),
+                        "soil_water_error": cand_wy.get("soil_water_error"),
+                        "wheat_yield_error": cand_wy.get("wheat_yield_error"),
+                        "maize_yield_error": cand_wy.get("maize_yield_error"),
+                        "total_biomass_error": cand_wy.get("total_biomass_error"),
+                        "structure_error": cand_wy.get("structure_error"),
+                        "phenology_error_days_max": cand_wy.get("phenology_error_days_max"),
+                        "yield_constraint_passed": cand_wy.get("yield_constraint_passed"),
+                        "phenology_passed": cand_wy.get("phenology_passed"),
+                        "soil_water_sawtooth_score": (metrics.get("candidate_soil_water_sawtooth") or {}).get("soil_water_sawtooth_score"),
+                        "max_soil_water_daily_jump": (metrics.get("candidate_soil_water_sawtooth") or {}).get("max_daily_jump"),
+                    },
+                    "acceptance_decision": {
+                        "accepted_as_greedy_best": False,
+                        "reason": "Irrigation smoothing/amount search records candidates and ranks after evaluation instead of greedily replacing the baseline.",
+                    },
+                    "reason": "针对 soil_water 曲线锯齿，测试小幅自动补水或小剂量固定日期补水，优先压低相邻日期跳变。",
+                    "expected_effect": "减少单次补水尖峰和曲线日际跳变，同时记录 yield/phenology 约束是否仍可接受。",
+                    "risk": "过度平滑可能牺牲产量或让土壤水分长期偏干；超限候选会保留记录但不优先进入 feasible 类别。",
+                }
+            )
         base.ensure_manifest_cn(manifest)
         g = c_custom.get("group_scores", {})
         sobol_summary = ""
@@ -4159,7 +5344,13 @@ def main():
                 f"- 候选是否接受：{'是' if better else '否'}\n\n"
             )
         water_summary = ""
-        if args.action_mode in ("water_yield_search", "hdsw_water_yield_search"):
+        if args.action_mode in (
+            "water_yield_search",
+            "hdsw_water_yield_search",
+            "yield_pareto_irrigation_amount_search",
+            "yield_pareto_irrigation_recovery_search",
+            "yield_pareto_irrigation_smoothing_search",
+        ):
             bw = metrics.get("baseline_hdsw_water_yield", metrics.get("baseline_water_yield", {}))
             cw = metrics.get("candidate_hdsw_water_yield", metrics.get("candidate_water_yield", {}))
             layer_lines = []
@@ -4183,13 +5374,40 @@ def main():
                 f"- crit_fr_asw 变化：{json.dumps(crit_fr_asw_meta, ensure_ascii=False) if crit_fr_asw_meta else '无'}\n"
                 f"- 全局 Sobol 系统参数变化：{json.dumps(system_sobol_meta, ensure_ascii=False) if system_sobol_meta else '无'}\n"
                 f"- 全局 Sobol 组合变化：{json.dumps(system_sobol_combo_meta, ensure_ascii=False) if system_sobol_combo_meta else '无'}\n"
+                f"- 灌溉事件统计 baseline -> candidate：总量 {base.cn(metrics.get('baseline_irrigation_stats', {}).get('total_irrigation_mm'))} -> {base.cn(metrics.get('candidate_irrigation_stats', {}).get('total_irrigation_mm'))} mm；单次最大 {base.cn(metrics.get('baseline_irrigation_stats', {}).get('max_single_irrigation_mm'))} -> {base.cn(metrics.get('candidate_irrigation_stats', {}).get('max_single_irrigation_mm'))} mm\n"
+                f"- soil_water 锯齿评分 baseline -> candidate：{base.cn((metrics.get('baseline_soil_water_sawtooth') or {}).get('soil_water_sawtooth_score'))} -> {base.cn((metrics.get('candidate_soil_water_sawtooth') or {}).get('soil_water_sawtooth_score'))}；最大日跳变 {base.cn((metrics.get('baseline_soil_water_sawtooth') or {}).get('max_daily_jump'))} -> {base.cn((metrics.get('candidate_soil_water_sawtooth') or {}).get('max_daily_jump'))}\n"
                 f"- 是否接受 candidate：{'是' if better else '否'}\n"
                 f"- 接受/拒绝原因：{water_decision.get('reason') or 'NA'}\n\n"
             )
+        objective_label = (
+            "Yield Pareto 自动灌溉轻减量 + 产量恢复"
+            if args.action_mode == "yield_pareto_irrigation_recovery_search"
+            else (
+                "Yield Pareto 灌溉平滑化搜索"
+                if args.action_mode == "yield_pareto_irrigation_smoothing_search"
+                else (
+                    "Yield Pareto 自动灌溉单次量重校准"
+                    if args.action_mode == "yield_pareto_irrigation_amount_search"
+                    else (
+                        "Yield Pareto 局部组合重校准"
+                        if args.action_mode == "yield_pareto_local_search"
+                        else (
+                            "HDSW Water-yield 水分-产量约束搜索"
+                            if args.action_mode == "hdsw_water_yield_search"
+                            else (
+                                "Water-yield 水分-产量约束搜索"
+                                if args.action_mode == "water_yield_search"
+                                else ("Sobol 分阶段品种参数校准" if sobol_plan else "小麦与玉米（生物量优先）")
+                            )
+                        )
+                    )
+                )
+            )
+        )
         summary = (
             f"第 {iter_no} 轮完成\n\n"
             f"一、本轮目标\n"
-            f"- 优化对象：{'HDSW Water-yield 水分-产量约束搜索' if args.action_mode == 'hdsw_water_yield_search' else ('Water-yield 水分-产量约束搜索' if args.action_mode == 'water_yield_search' else ('Sobol 分阶段品种参数校准' if sobol_plan else '小麦与玉米（生物量优先）'))}\n"
+            f"- 优化对象：{objective_label}\n"
             f"- 迭代策略：{scope}\n"
             f"- 评分模式：{metrics.get('score_mode')}\n"
             f"- 物候约束：max(小麦/玉米物候误差) <= {args.pheno_guard_days} 天\n\n"
@@ -4242,13 +5460,40 @@ def main():
             b_custom,
             c_custom,
         )
-        if args.action_mode in ("water_yield_search", "hdsw_water_yield_search"):
+        if args.action_mode in (
+            "water_yield_search",
+            "hdsw_water_yield_search",
+            "yield_pareto_irrigation_amount_search",
+            "yield_pareto_irrigation_recovery_search",
+            "yield_pareto_irrigation_smoothing_search",
+        ):
             write_water_yield_stage_alignment(iter_dir / "stage_alignment.csv", water_plan or {}, irrigation_meta, sobol_meta, metrics, better, water_decision)
         elif sobol_plan:
             write_sobol_stage_alignment(iter_dir / "stage_alignment.csv", sobol_plan, sobol_meta, metrics, better)
         else:
             base.write_stage_alignment(iter_dir / "stage_alignment.csv")
         base.write_patch(truth_before, truth_after, wheat_before, wheat_after, maize_before, maize_after, iter_dir / "patch.diff")
+
+        if args.action_mode in (
+            "yield_pareto_local_search",
+            "yield_pareto_irrigation_amount_search",
+            "yield_pareto_irrigation_recovery_search",
+            "yield_pareto_irrigation_smoothing_search",
+        ):
+            pareto_rows.append(
+                build_pareto_candidate_row(
+                    iteration=iter_no,
+                    action_type=(water_plan or {}).get("action_type", action),
+                    changed_parameters=changed_parameters_from_manifest(cultivar_changes, non_cultivar_changes),
+                    metrics=metrics,
+                    args=args,
+                    candidate_dir=iter_dir,
+                )
+            )
+            ranked_rows = rank_pareto_candidates(pareto_rows)
+            pareto_rows = ranked_rows
+            write_pareto_candidates_csv(PROCESS_BIO / "pareto_candidates.csv", ranked_rows)
+            copy_pareto_best_dirs(PROCESS_BIO, ranked_rows)
 
         cand_w = base.get_manager_cultivar(truth_after, "Wheat Management")
         cand_m = base.get_manager_cultivar(truth_after, "Maize Management")
@@ -4331,6 +5576,14 @@ def main():
                 no_water_improve_count = 0
             else:
                 no_water_improve_count += 1
+        elif args.action_mode == "yield_pareto_local_search":
+            ok = False
+        elif args.action_mode == "yield_pareto_irrigation_amount_search":
+            ok = False
+        elif args.action_mode == "yield_pareto_irrigation_recovery_search":
+            ok = False
+        elif args.action_mode == "yield_pareto_irrigation_smoothing_search":
+            ok = False
         else:
             ok = success_reached(
                 c_custom,
