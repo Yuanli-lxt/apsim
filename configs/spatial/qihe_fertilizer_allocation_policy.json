@@ -1,0 +1,24 @@
+{
+  "policy_version": "2026-07-16-v2",
+  "reference_test_scenario_n_kg_per_crop_ha": 180.0,
+  "compound_nutrient_composition_scenarios": [
+    {"id": "balanced_1_1_1", "n_fraction": 0.3333333333333333, "p2o5_fraction": 0.3333333333333333, "k2o_fraction": 0.3333333333333333},
+    {"id": "n_moderate_4_3_3", "n_fraction": 0.4, "p2o5_fraction": 0.3, "k2o_fraction": 0.3},
+    {"id": "n_rich_2_1_1", "n_fraction": 0.5, "p2o5_fraction": 0.25, "k2o_fraction": 0.25}
+  ],
+  "additional_rotation_allocation_share_sensitivity": [0.7, 0.8, 0.9, 1.0],
+  "interpretation": {
+    "statistical_constraint": "County annual fertilizer use for all agriculture.",
+    "crop_allocation": "The observed share assigned to wheat and maize is unknown. The annual wheat-plus-maize share of total crop sown area is calculated as an area-proportional reference; additional fixed shares are sensitivity assumptions only.",
+    "temporal_split": "Sowing and topdress fractions are management assumptions independent of the county annual total.",
+    "compound_fertilizer": "The yearbook reports total nutrient-equivalent compound fertilizer, not its nitrogen component; nitrogen fraction is therefore uncertain.",
+    "reference_status": "The existing 180 kg N/ha per wheat season and per maize season is only a previous test scenario. It is retained for reproducibility, not treated as a target, requirement, observation, or optimization constraint.",
+    "model_scope": "The current APSIM template has SoilN but no SoilP profile/module and no potassium limitation module. N can affect simulated yield; P2O5 and K2O statistics are retained for management diagnostics but are not injected into the current model."
+  },
+  "forbidden_uses": [
+    "Treating the county total as wheat-only or maize-only fertilizer",
+    "Treating all nutrient-equivalent compound fertilizer as nitrogen",
+    "Inferring sowing/topdress timing from an annual fertilizer-use table",
+    "Calling a sensitivity-derived rate an observed management record"
+  ]
+}

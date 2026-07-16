@@ -622,6 +622,14 @@ def convert_units(layer_rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if not _is_missing(ks) and ks < 0:
             ks = np.nan
 
+        # HWSD uses negative sentinel values (commonly -1 and -9) for missing
+        # C:N ratios.  Treat them as missing instead of passing them through to
+        # an APSIM profile.
+        if not _is_missing(cn_ratio) and cn_ratio <= 0:
+            cn_ratio = np.nan
+            out["source_flag"]["cn_ratio"] = "missing"
+            out["quality_flag"].append("cn_ratio_missing_code")
+
         out["value"].update(
             {
                 "sand_pct": sand,
@@ -778,6 +786,16 @@ def estimate_water_params(
         dul = float(np.clip(dul, 0.05, sat - 0.005))
         ll15 = float(np.clip(ll15, 0.01, dul - 0.005))
 
+        # APSIM requires a finite bulk density in every physical layer.  When
+        # HWSD carries a missing-code value, estimate BD from porosity after
+        # SAT has been measured or estimated.  The particle density assumption
+        # (2.65 g/cm3) is the same one already used above to infer SAT from BD.
+        if _is_missing(bd):
+            bd = float(np.clip(2.65 * (1.0 - sat), 0.8, 2.0))
+            vals["bd_g_cm3"] = bd
+            src["bulk_density"] = "calculated_by_PTF"
+            qf.add("bulk_density_from_porosity")
+
         if not (0.0 < ll15 < dul < sat < 0.9):
             qf.add("water_hierarchy_adjusted")
             if ll15 <= 0:
@@ -838,8 +856,11 @@ def build_apsim_soil_profile(
             ph_source = "default_value"
             qf.add("ph_defaulted")
 
-        soil_cn = vals["cn_ratio"] if not _is_missing(vals["cn_ratio"]) else DEFAULT_SOIL_CN[i]
-        soil_cn_source = src.get("cn_ratio", "default_value") if not _is_missing(vals["cn_ratio"]) else "default_value"
+        soil_cn_valid = not _is_missing(vals["cn_ratio"]) and float(vals["cn_ratio"]) > 0
+        soil_cn = vals["cn_ratio"] if soil_cn_valid else DEFAULT_SOIL_CN[i]
+        soil_cn_source = src.get("cn_ratio", "measured_from_HWSD") if soil_cn_valid else "default_value"
+        if not soil_cn_valid:
+            qf.add("soil_cn_defaulted")
 
         layer_out = {
             "Layer": row["layer"],

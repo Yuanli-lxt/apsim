@@ -1,0 +1,139 @@
+{
+  "default_scenario": "ordinary_farmer",
+  "notes": {
+    "density_conversion": "wheat 10,000 plants/ha = 1 plant/m2; maize plants/ha divided by 10,000 = plants/m2",
+    "nitrogen_units": "kg N/ha, not kg urea product/ha",
+    "irrigation_translation": "Scenario irrigation counts were converted to transparent fixed events. Wheat jointing+flowering totals 150 mm in the ordinary baseline; other event depths follow the 60-75 mm regional experimental range. Maize events use 50-60 mm.",
+    "cultivars": "Existing calibrated APSIM cultivar parameterisations are retained as proxies pending a separate 2020 phenology calibration."
+  },
+  "sources": [
+    {
+      "title": "Agrometeorological indicators from 1979 to present derived from reanalysis (AgERA5)",
+      "url": "https://cds.climate.copernicus.eu/datasets/sis-agrometeorological-indicators",
+      "doi": "10.24381/cds.6c68c9bb"
+    },
+    {
+      "title": "2019 黄淮海夏玉米生产技术指导意见",
+      "url": "https://zwfw.moa.gov.cn/gk/nszd_1/2019/201906/t20190606_6316285.htm"
+    },
+    {
+      "title": "2020年秋冬季主要农作物科学施肥指导意见",
+      "url": "https://zzys.moa.gov.cn/gdxw/202009/t20200930_6353753.htm"
+    },
+    {
+      "title": "2024年黄淮海夏玉米冬小麦双晚技术意见",
+      "url": "https://www.agri.cn/zx/zxfb/202409/t20240914_8671111.htm"
+    },
+    {
+      "title": "山东冬小麦-夏玉米品种匹配与灌水量试验",
+      "url": "https://sdnykx.chinajournal.net.cn/WKI/WebPublication/wkTextContent.aspx?colType=4&st=10&yt=2020"
+    }
+  ],
+  "scenarios": {
+    "ordinary_farmer": {
+      "label_zh": "普通农户情景",
+      "wheat": {
+        "sowing_start": "05-Oct",
+        "sowing_end": "15-Oct",
+        "density_plants_m2": 210.0,
+        "depth_mm": 40.0,
+        "row_spacing_mm": 250.0,
+        "total_n_kg_ha": 180.0,
+        "sowing_n_kg_ha": 108.0,
+        "topdress_n": [{"month_day": "03-20", "amount_kg_ha": 72.0}],
+        "irrigation": [
+          {"month_day": "03-20", "amount_mm": 75.0, "stage": "jointing"},
+          {"month_day": "04-20", "amount_mm": 75.0, "stage": "flowering"}
+        ]
+      },
+      "maize": {
+        "sowing_start": "12-Jun",
+        "sowing_end": "20-Jun",
+        "density_plants_m2": 6.0,
+        "depth_mm": 50.0,
+        "row_spacing_mm": 600.0,
+        "harvest_month_day": "10-01",
+        "total_n_kg_ha": 180.0,
+        "sowing_n_kg_ha": 60.0,
+        "topdress_n": [{"month_day": "07-20", "amount_kg_ha": 120.0}],
+        "irrigation": [
+          {"month_day": "06-16", "amount_mm": 60.0, "stage": "establishment"}
+        ]
+      }
+    },
+    "standard_high_yield": {
+      "label_zh": "规范高产情景",
+      "wheat": {
+        "sowing_start": "10-Oct",
+        "sowing_end": "10-Oct",
+        "density_plants_m2": 225.0,
+        "depth_mm": 40.0,
+        "row_spacing_mm": 250.0,
+        "total_n_kg_ha": 210.0,
+        "sowing_n_kg_ha": 105.0,
+        "topdress_n": [
+          {"month_day": "03-20", "amount_kg_ha": 73.5},
+          {"month_day": "04-20", "amount_kg_ha": 31.5}
+        ],
+        "irrigation": [
+          {"month_day": "12-15", "amount_mm": 60.0, "stage": "overwintering"},
+          {"month_day": "03-20", "amount_mm": 75.0, "stage": "jointing"},
+          {"month_day": "04-20", "amount_mm": 75.0, "stage": "flowering"}
+        ]
+      },
+      "maize": {
+        "sowing_start": "15-Jun",
+        "sowing_end": "15-Jun",
+        "density_plants_m2": 6.75,
+        "depth_mm": 50.0,
+        "row_spacing_mm": 600.0,
+        "harvest_month_day": "10-05",
+        "total_n_kg_ha": 220.0,
+        "sowing_n_kg_ha": 73.333,
+        "topdress_n": [{"month_day": "07-20", "amount_kg_ha": 146.667}],
+        "irrigation": [
+          {"month_day": "07-15", "amount_mm": 50.0, "stage": "jointing"},
+          {"month_day": "08-05", "amount_mm": 60.0, "stage": "tasseling"}
+        ]
+      }
+    },
+    "demonstration_high_yield": {
+      "label_zh": "高产示范情景",
+      "wheat": {
+        "sowing_start": "10-Oct",
+        "sowing_end": "15-Oct",
+        "density_plants_m2": 255.0,
+        "depth_mm": 40.0,
+        "row_spacing_mm": 250.0,
+        "total_n_kg_ha": 250.0,
+        "sowing_n_kg_ha": 100.0,
+        "topdress_n": [
+          {"month_day": "03-20", "amount_kg_ha": 75.0},
+          {"month_day": "04-20", "amount_kg_ha": 75.0}
+        ],
+        "irrigation": [
+          {"month_day": "12-15", "amount_mm": 60.0, "stage": "overwintering"},
+          {"month_day": "03-20", "amount_mm": 75.0, "stage": "jointing"},
+          {"month_day": "04-20", "amount_mm": 75.0, "stage": "flowering"},
+          {"month_day": "05-10", "amount_mm": 60.0, "stage": "grain_filling"}
+        ]
+      },
+      "maize": {
+        "sowing_start": "01-Jun",
+        "sowing_end": "25-Jun",
+        "density_plants_m2": 7.8,
+        "depth_mm": 50.0,
+        "row_spacing_mm": 600.0,
+        "harvest_month_day": "10-06",
+        "total_n_kg_ha": 250.0,
+        "sowing_n_kg_ha": 83.333,
+        "topdress_n": [{"month_day": "07-20", "amount_kg_ha": 166.667}],
+        "irrigation": [
+          {"month_day": "06-16", "amount_mm": 50.0, "stage": "establishment"},
+          {"month_day": "07-15", "amount_mm": 50.0, "stage": "jointing"},
+          {"month_day": "08-05", "amount_mm": 60.0, "stage": "tasseling"}
+        ]
+      }
+    }
+  }
+}
