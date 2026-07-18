@@ -1,5 +1,8 @@
 # 已完成与未完成内容总结
 
+> 状态提示：本文是创建时点的阶段快照。齐河县最新1 km实跑、1/10 km比较和正式统计对照
+> 请以`docs/qihe/validation/qihe_1km_resolution_test.md`为准；完整文档导航见`docs/README.md`。
+
 ## 已完成内容
 
 ### 1. 数据准备

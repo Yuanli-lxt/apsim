@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
 import time
 import xml.etree.ElementTree as ET
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -34,6 +35,14 @@ OUTPUT_ROOT = ROOT / "outputs" / "spatial" / "county_pilot_2020" / "corrected_ba
 DEFAULT_APSIM_EXE = Path(r"F:\APSIM710-r4221\Model\Apsim.exe")
 START_YEAR = 2017
 END_YEAR = 2020
+
+
+def sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def set_ui(manager: ET.Element, tag: str, value: str | float) -> None:
@@ -208,7 +217,8 @@ def prepare_case(case: pd.Series, scenario_name: str, scenario: dict, output_roo
     soil = root.find(".//Soil")
     if soil is not None:
         soil.find("Site").text = "Qihe County corrected 2020 baseline"
-        soil.find("LocationAccuracy").text = "HWSD unit area split within each 5 km rotation grid cell"
+        resolution_km = int(case.resolution_m) // 1000
+        soil.find("LocationAccuracy").text = f"HWSD unit area split within each {resolution_km} km rotation grid cell"
     configure_management(root, scenario)
     simulation.find(".//outputfile[@name='Harvest']/filename").text = harvest_path.name
     simulation.find(".//outputfile[@name='Phases']/filename").text = phases_path.name
@@ -267,8 +277,12 @@ def aggregate(units: pd.DataFrame, results: pd.DataFrame, outdir: Path) -> None:
 
 
 def main(args: argparse.Namespace) -> None:
+    run_started = time.perf_counter()
+    started_at = datetime.now(timezone.utc).astimezone().isoformat()
     units_csv = PILOT / "corrected_baseline" / f"corrected_baseline_units_{args.resolution_m // 1000}km.csv"
-    output_root = OUTPUT_ROOT if args.resolution_m == 5000 else OUTPUT_ROOT / f"resolution_{args.resolution_m // 1000}km"
+    output_root = args.output_root.resolve() if args.output_root else (
+        OUTPUT_ROOT if args.resolution_m == 5000 else OUTPUT_ROOT / f"resolution_{args.resolution_m // 1000}km"
+    )
     for path in (units_csv, CONFIG, TEMPLATE, args.apsim_exe):
         if not path.exists():
             raise FileNotFoundError(path)
@@ -281,6 +295,23 @@ def main(args: argparse.Namespace) -> None:
         cases = cases.head(args.limit)
     outdir = output_root / scenario_name
     outdir.mkdir(parents=True, exist_ok=True)
+    metadata_path = outdir / "run_metadata.json"
+    metadata = {
+        "status": "running", "started_at": started_at,
+        "command": [sys.executable, *sys.argv], "resolution_m": args.resolution_m,
+        "scenario": scenario_name, "output_root": str(output_root),
+        "total_unique_cases": int(len(cases)),
+        "input_paths": {
+            "units": str(units_csv.resolve()), "management_config": str(CONFIG.resolve()),
+            "apsim_template": str(TEMPLATE.resolve()), "apsim_executable": str(args.apsim_exe.resolve()),
+        },
+        "sha256": {
+            "units": sha256(units_csv), "management_config": sha256(CONFIG),
+            "apsim_template": sha256(TEMPLATE), "runner_script": sha256(Path(__file__)),
+            "apsim_executable": sha256(args.apsim_exe),
+        },
+    }
+    metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
     (outdir / "management_scenario.json").write_text(
         json.dumps({"scenario": scenario_name, **scenario}, ensure_ascii=False, indent=2),
         encoding="utf-8",
@@ -315,13 +346,24 @@ def main(args: argparse.Namespace) -> None:
             aggregate(units, result_frame, outdir)
         if (status_frame.status == "failed").any():
             raise RuntimeError(f"{int((status_frame.status == 'failed').sum())} APSIM cases failed")
+    metadata.update({
+        "status": "prepared" if args.prepare_only else "success",
+        "finished_at": datetime.now(timezone.utc).astimezone().isoformat(),
+        "elapsed_seconds": time.perf_counter() - run_started,
+        "successful_cases": int((status_frame.status == "success").sum()),
+        "failed_cases": int((status_frame.status == "failed").sum()),
+        "prepared_cases": int((status_frame.status == "prepared").sum()),
+    })
+    metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apsim-exe", type=Path, default=DEFAULT_APSIM_EXE)
     parser.add_argument("--scenario", choices=("ordinary_farmer", "standard_high_yield", "demonstration_high_yield"))
-    parser.add_argument("--resolution-m", type=int, choices=(5000, 10000), default=5000)
+    parser.add_argument("--resolution-m", type=int, choices=(1000, 2000, 5000, 10000), default=5000)
+    parser.add_argument("--output-root", type=Path,
+                        help="Optional new run root; use this to avoid overwriting an earlier baseline.")
     parser.add_argument("--limit", type=int)
     parser.add_argument("--prepare-only", action="store_true")
     parser.add_argument("--timeout-seconds", type=int, default=180)

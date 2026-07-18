@@ -244,6 +244,22 @@ def build_agera5_met_files() -> tuple[np.ndarray, np.ndarray]:
     return np.asarray(latitudes, dtype=float), np.asarray(longitudes, dtype=float)
 
 
+def existing_agera5_coordinates() -> tuple[np.ndarray, np.ndarray]:
+    """Reuse the frozen 2017-2020 AgERA5 files without rewriting them."""
+    pattern = re.compile(r"AgERA5_v2_(-?\d+\.\d+)_(-?\d+\.\d+)_2017_2020\.met$")
+    coordinates = []
+    for path in WEATHER_DIR.glob("AgERA5_v2_*_2017_2020.met"):
+        match = pattern.match(path.name)
+        if match:
+            coordinates.append((float(match.group(1)), float(match.group(2))))
+    if not coordinates:
+        raise FileNotFoundError(f"No frozen AgERA5 met files found in {WEATHER_DIR}")
+    return (
+        np.asarray(sorted({lat for lat, _ in coordinates}), dtype=float),
+        np.asarray(sorted({lon for _, lon in coordinates}), dtype=float),
+    )
+
+
 def attach_weather(subunits: pd.DataFrame, latitudes: np.ndarray, longitudes: np.ndarray, resolution_m: int = 5000) -> pd.DataFrame:
     weather_lat = []
     weather_lon = []
@@ -273,13 +289,18 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--soil-only", action="store_true")
     parser.add_argument("--generate-missing-soils", action="store_true")
+    parser.add_argument("--reuse-existing-weather", action="store_true",
+                        help="Attach the existing frozen AgERA5 met files without rewriting them.")
     parser.add_argument("--resolution-m", type=int, choices=(1000, 2000, 5000, 10000), default=5000)
     args = parser.parse_args()
     subunits = build_soil_subunits(args.resolution_m, args.generate_missing_soils)
     if args.soil_only:
         print(f"soil subunits={len(subunits)}, soils={subunits.hwsd_soil_unit.nunique()}")
         return
-    latitudes, longitudes = build_agera5_met_files()
+    if args.reuse_existing_weather:
+        latitudes, longitudes = existing_agera5_coordinates()
+    else:
+        latitudes, longitudes = build_agera5_met_files()
     units = attach_weather(subunits, latitudes, longitudes, args.resolution_m)
     metadata = {
         "resolution_m": args.resolution_m,

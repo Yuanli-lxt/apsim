@@ -261,7 +261,7 @@ cn_wheat10_vs_city_statistics_2024.*
 完整方法、结果和限制：
 
 ```text
-docs/public_sceua_shandong_results.md
+docs/sceua/public_sceua_shandong_results.md
 ```
 
 公开数据获取说明：

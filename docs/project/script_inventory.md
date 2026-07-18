@@ -78,3 +78,11 @@
 - 可复现边界不清：大型结果不纳入 Git，只保留索引；这有利于控制仓库体量，但需要更完整的 run manifest。
 - 编码风险：部分中文文档或终端输出在当前 PowerShell 中出现错显，建议统一 UTF-8。
 - 缺少统一入口：尚未看到 `run_pipeline.py`、`Makefile`、`Snakefile`、`pyproject.toml` 或一键复现实验配置。
+
+## 2026-07-16 齐河1 km扩展脚本
+
+| 脚本路径 | 主要功能 | 输入 | 输出 | 可复现性说明 |
+|---|---|---|---|---|
+| `scripts/spatial_data/prepare_corrected_baseline_inputs.py` | 新增1 km HWSD面积拆分，并可复用冻结的AgERA5文件 | 1 km轮作格网、10 m轮作掩膜、HWSD、AgERA5 `.met` | `corrected_baseline_units_1km.csv`及面积检查 | `--reuse-existing-weather`避免重写已有气象输入 |
+| `scripts/apsim_inputs/run_corrected_baseline.py` | 支持1 km及自定义新输出根目录，写入run metadata和SHA-256 | 1 km单元、普通农户管理、APSIM模板 | 案例输出、汇总、`run_metadata.json` | 使用`--output-root`隔离run_id，不覆盖5/10 km结果 |
+| `scripts/apsim_inputs/analyze_qihe_1km_resolution_test.py` | 提取2018—2020收获结果，比较1/10 km并对照正式统计 | 1 km新运行、10 km冻结运行、官方统计、5 km固定系数 | CSV、GPKG、SVG/PDF/PNG/TIFF、metadata | 不为1/10 km重新拟合系数 |
